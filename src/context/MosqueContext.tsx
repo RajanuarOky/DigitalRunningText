@@ -41,6 +41,23 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isAudioUnlocked, setIsAudioUnlocked] = useState<boolean>(false);
   const isSimulatingRef = useRef<boolean>(false);
 
+  // Keep fresh references for callbacks and timers without causing re-subscriptions
+  const dataRef = useRef<SystemData>(data);
+  const displayStateRef = useRef<AppDisplayState>(displayState);
+  const activePrayerTargetRef = useRef<PrayerName | null>(activePrayerTarget);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  useEffect(() => {
+    displayStateRef.current = displayState;
+  }, [displayState]);
+
+  useEffect(() => {
+    activePrayerTargetRef.current = activePrayerTarget;
+  }, [activePrayerTarget]);
+
   // Perhitungan jadwal sholat berdasarkan config terkini
   const prayers = useMemo(() => {
     return computePrayers(data.mosque, currentTime);
@@ -66,11 +83,11 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setDisplayState('TARTIL');
     setActivePrayerTarget(prayerName);
     setStateCountdownSeconds(duration);
-    const tartilCfg = data.tartil.prayers[prayerName as keyof typeof data.tartil.prayers];
+    const tartilCfg = dataRef.current.tartil.prayers[prayerName as keyof typeof dataRef.current.tartil.prayers];
     if (tartilCfg && tartilCfg.audioUrl) {
-      audioService.playTartil(tartilCfg.audioUrl, data.tartil.volume);
+      audioService.playTartil(tartilCfg.audioUrl, dataRef.current.tartil.volume);
     }
-  }, [data]);
+  }, []);
 
   const applyLocalSimulateIqomah = useCallback((prayerName: PrayerName = 'maghrib', durationSeconds = 120) => {
     isSimulatingRef.current = true;
@@ -181,120 +198,125 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
-  // Clock tick & transisi otomatis ibadah
+  // 1. Rock-solid independent 1-second clock tick (never cancelled by renders or state updates)
   useEffect(() => {
     const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTime(now);
-
-      // Jika dalam mode simulasi, countdown manual per detik
-      if (isSimulatingRef.current) {
-        setStateCountdownSeconds((prev: number) => {
-          if (prev <= 1) {
-            // Transisi tahap simulasi berikutnya
-            if (displayState === 'ADZAN') {
-              setDisplayState('IQOMAH');
-              return 60; // Lanjut ke demo iqomah 60 detik
-            } else if (displayState === 'IQOMAH') {
-              setDisplayState('PRAYER');
-              return 45; // Lanjut ke demo sholat 45 detik
-            } else {
-              setDisplayState('NORMAL');
-              isSimulatingRef.current = false;
-              audioService.stopTartil();
-              return 0;
-            }
-          }
-
-          if (displayState === 'IQOMAH' && prev <= 10 && prev > 0) {
-            audioService.playBeep(1050, 0.1, 'sine', 0.4);
-          }
-          return prev - 1;
-        });
-        return;
-      }
-
-      // 1. Pengecekan Waktu Adzan Masuk Real-Time
-      // Jika adzan masuk terdeteksi dalam rentang waktu saat ini
-      if (prayers.currentAdzanPrayer && displayState !== 'ADZAN' && displayState !== 'IQOMAH' && displayState !== 'PRAYER') {
-        audioService.stopTartil();
-        audioService.playAdzanChime();
-        setDisplayState('ADZAN');
-        setActivePrayerTarget(prayers.currentAdzanPrayer.name);
-        setStateCountdownSeconds(90); // Tampilan adzan 90 detik
-        return;
-      }
-
-      // 2. Transisi Adzan -> Iqomah
-      if (displayState === 'ADZAN') {
-        setStateCountdownSeconds((prev: number) => {
-          if (prev <= 1) {
-            const iqomahMinutes = (activePrayerTarget && data.iqomah.durations[activePrayerTarget as keyof typeof data.iqomah.durations]) || 8;
-            setDisplayState('IQOMAH');
-            return iqomahMinutes * 60;
-          }
-          return prev - 1;
-        });
-        return;
-      }
-
-      // 3. Transisi Iqomah -> Sholat
-      if (displayState === 'IQOMAH') {
-        setStateCountdownSeconds((prev: number) => {
-          if (prev <= 1) {
-            setDisplayState('PRAYER');
-            return (data.prayerMode.durationMinutes || 12) * 60;
-          }
-          if (prev <= data.iqomah.beepLastSeconds) {
-            audioService.playBeep(1150, 0.12, 'square', 0.4);
-          }
-          return prev - 1;
-        });
-        return;
-      }
-
-      // 4. Transisi Sholat -> Normal
-      if (displayState === 'PRAYER') {
-        setStateCountdownSeconds((prev: number) => {
-          if (prev <= 1) {
-            setDisplayState('NORMAL');
-            setActivePrayerTarget(null);
-            return 0;
-          }
-          return prev - 1;
-        });
-        return;
-      }
-
-      // 5. Pengecekan Masuk Waktu Tartil Otomatis (Pre-Adzan)
-      const nextPrayerName = prayers.nextPrayer.name;
-      const secondsLeft = prayers.timeRemainingSeconds;
-
-      if (data.tartil.masterEnabled && displayState === 'NORMAL') {
-        const prayerKey = nextPrayerName as keyof typeof data.tartil.prayers;
-        const tartilConfig = data.tartil.prayers[prayerKey];
-
-        if (tartilConfig && tartilConfig.enabled) {
-          const tartilWindowSeconds = tartilConfig.minutesBefore * 60;
-          if (secondsLeft <= tartilWindowSeconds && secondsLeft > 0) {
-            setDisplayState('TARTIL');
-            setActivePrayerTarget(nextPrayerName);
-            setStateCountdownSeconds(secondsLeft);
-            if (tartilConfig.audioUrl) {
-              audioService.playTartil(tartilConfig.audioUrl, data.tartil.volume);
-            }
-          }
-        }
-      }
-
-      // 6. Jika sedang Tartil, update sisa detik menuju adzan
-      if (displayState === 'TARTIL') {
-        setStateCountdownSeconds(secondsLeft);
-      }
+      setCurrentTime(new Date());
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [data, displayState, prayers, activePrayerTarget]);
+  }, []);
+
+  // 2. State transition & countdown decrements (fires synchronously on each second tick)
+  useEffect(() => {
+    const currentDisplayState = displayStateRef.current;
+    const currentActivePrayer = activePrayerTargetRef.current;
+    const currentData = dataRef.current;
+
+    // A. Mode Simulasi: countdown berkurang 1 detik tiap detiknya
+    if (isSimulatingRef.current) {
+      setStateCountdownSeconds((prev: number) => {
+        if (prev <= 1) {
+          if (currentDisplayState === 'ADZAN') {
+            setDisplayState('IQOMAH');
+            return 60; // Lanjut ke demo iqomah 60 detik
+          } else if (currentDisplayState === 'IQOMAH') {
+            setDisplayState('PRAYER');
+            return 45; // Lanjut ke demo sholat 45 detik
+          } else {
+            setDisplayState('NORMAL');
+            isSimulatingRef.current = false;
+            audioService.stopTartil();
+            return 0;
+          }
+        }
+
+        if (currentDisplayState === 'IQOMAH' && prev <= 10 && prev > 0) {
+          audioService.playBeep(1050, 0.1, 'sine', 0.4);
+        }
+        return prev - 1;
+      });
+      return;
+    }
+
+    // B. Mode Nyata (Real-time prayer scheduling)
+    // 1. Pengecekan Waktu Adzan Masuk Real-Time
+    if (prayers.currentAdzanPrayer && currentDisplayState !== 'ADZAN' && currentDisplayState !== 'IQOMAH' && currentDisplayState !== 'PRAYER') {
+      audioService.stopTartil();
+      audioService.playAdzanChime();
+      setDisplayState('ADZAN');
+      setActivePrayerTarget(prayers.currentAdzanPrayer.name);
+      setStateCountdownSeconds(90); // Tampilan adzan 90 detik
+      return;
+    }
+
+    // 2. Transisi Adzan -> Iqomah
+    if (currentDisplayState === 'ADZAN') {
+      setStateCountdownSeconds((prev: number) => {
+        if (prev <= 1) {
+          const iqomahMinutes = (currentActivePrayer && currentData.iqomah.durations[currentActivePrayer as keyof typeof currentData.iqomah.durations]) || 8;
+          setDisplayState('IQOMAH');
+          return iqomahMinutes * 60;
+        }
+        return prev - 1;
+      });
+      return;
+    }
+
+    // 3. Transisi Iqomah -> Sholat
+    if (currentDisplayState === 'IQOMAH') {
+      setStateCountdownSeconds((prev: number) => {
+        if (prev <= 1) {
+          setDisplayState('PRAYER');
+          return (currentData.prayerMode.durationMinutes || 12) * 60;
+        }
+        if (prev <= currentData.iqomah.beepLastSeconds) {
+          audioService.playBeep(1150, 0.12, 'square', 0.4);
+        }
+        return prev - 1;
+      });
+      return;
+    }
+
+    // 4. Transisi Sholat -> Normal
+    if (currentDisplayState === 'PRAYER') {
+      setStateCountdownSeconds((prev: number) => {
+        if (prev <= 1) {
+          setDisplayState('NORMAL');
+          setActivePrayerTarget(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+      return;
+    }
+
+    // 5. Pengecekan Masuk Waktu Tartil Otomatis (Pre-Adzan)
+    const nextPrayerName = prayers.nextPrayer.name;
+    const secondsLeft = prayers.timeRemainingSeconds;
+
+    if (currentData.tartil.masterEnabled && currentDisplayState === 'NORMAL') {
+      const prayerKey = nextPrayerName as keyof typeof currentData.tartil.prayers;
+      const tartilConfig = currentData.tartil.prayers[prayerKey];
+
+      if (tartilConfig && tartilConfig.enabled) {
+        const tartilWindowSeconds = tartilConfig.minutesBefore * 60;
+        if (secondsLeft <= tartilWindowSeconds && secondsLeft > 0) {
+          setDisplayState('TARTIL');
+          setActivePrayerTarget(nextPrayerName);
+          setStateCountdownSeconds(secondsLeft);
+          if (tartilConfig.audioUrl) {
+            audioService.playTartil(tartilConfig.audioUrl, currentData.tartil.volume);
+          }
+        }
+      }
+    }
+
+    // 6. Jika sedang Tartil, update sisa detik menuju adzan
+    if (currentDisplayState === 'TARTIL') {
+      setStateCountdownSeconds(secondsLeft);
+    }
+  }, [currentTime, prayers]);
 
   // Simulator Triggers yang Mem-broadcast ke Seluruh Tab/Window (TV Display) & Cloud
   const simulateTartil = useCallback((prayerName: PrayerName = 'maghrib', durationSeconds = 60) => {
