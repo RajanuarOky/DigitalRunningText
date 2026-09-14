@@ -9,11 +9,13 @@ export interface SupabaseConfig {
 }
 
 const SUPABASE_CONFIG_KEY = 'rt_tv_supabase_settings_v1';
+const envUrl = (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_URL || '';
+const envKey = (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_ANON_KEY || '';
 
 export const DEFAULT_SUPABASE_CONFIG: SupabaseConfig = {
-  enabled: false,
-  url: (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_URL || '',
-  anonKey: (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_ANON_KEY || '',
+  enabled: Boolean(envUrl && envKey),
+  url: envUrl,
+  anonKey: envKey,
   syncId: 'default',
 };
 
@@ -31,7 +33,16 @@ class SupabaseService {
     try {
       const saved = localStorage.getItem(SUPABASE_CONFIG_KEY);
       if (saved) {
-        this.config = { ...DEFAULT_SUPABASE_CONFIG, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        this.config = {
+          ...DEFAULT_SUPABASE_CONFIG,
+          ...parsed,
+          url: parsed.url || DEFAULT_SUPABASE_CONFIG.url,
+          anonKey: parsed.anonKey || DEFAULT_SUPABASE_CONFIG.anonKey,
+          enabled: parsed.enabled ?? DEFAULT_SUPABASE_CONFIG.enabled,
+        };
+      } else {
+        this.config = DEFAULT_SUPABASE_CONFIG;
       }
     } catch {
       this.config = DEFAULT_SUPABASE_CONFIG;
