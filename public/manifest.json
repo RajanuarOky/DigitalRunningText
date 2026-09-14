@@ -1,0 +1,18 @@
+{
+  "name": "TV Masjid Digital & Auto-Tartil",
+  "short_name": "TV Masjid",
+  "description": "Digital Signage Running Text & Jadwal Sholat TV Masjid",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
