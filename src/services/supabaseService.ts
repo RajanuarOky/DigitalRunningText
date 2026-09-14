@@ -9,7 +9,7 @@ export interface SupabaseConfig {
 }
 
 const SUPABASE_CONFIG_KEY = 'rt_tv_supabase_settings_v1';
-const envUrl = (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_URL || '';
+const envUrl = (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_URL || 'https://iwtrmzbqldpzxjsiolpu.supabase.co';
 const envKey = (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_ANON_KEY || '';
 
 export const DEFAULT_SUPABASE_CONFIG: SupabaseConfig = {
@@ -34,15 +34,23 @@ class SupabaseService {
       const saved = localStorage.getItem(SUPABASE_CONFIG_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        const url = parsed.url || DEFAULT_SUPABASE_CONFIG.url;
+        const anonKey = parsed.anonKey || DEFAULT_SUPABASE_CONFIG.anonKey;
+        // Otomatis aktif jika URL dan Anon Key tersedia
+        const isEnabled = (url && anonKey) ? (parsed.enabled !== false) : false;
         this.config = {
           ...DEFAULT_SUPABASE_CONFIG,
           ...parsed,
-          url: parsed.url || DEFAULT_SUPABASE_CONFIG.url,
-          anonKey: parsed.anonKey || DEFAULT_SUPABASE_CONFIG.anonKey,
-          enabled: parsed.enabled ?? DEFAULT_SUPABASE_CONFIG.enabled,
+          url,
+          anonKey,
+          enabled: isEnabled,
         };
       } else {
-        this.config = DEFAULT_SUPABASE_CONFIG;
+        const hasKeys = Boolean(DEFAULT_SUPABASE_CONFIG.url && DEFAULT_SUPABASE_CONFIG.anonKey);
+        this.config = {
+          ...DEFAULT_SUPABASE_CONFIG,
+          enabled: hasKeys,
+        };
       }
     } catch {
       this.config = DEFAULT_SUPABASE_CONFIG;
@@ -62,7 +70,8 @@ class SupabaseService {
       this.activeChannel = null;
     }
 
-    if (this.config.enabled && this.config.url && this.config.anonKey) {
+    if (this.config.url && this.config.anonKey) {
+      this.config.enabled = true; // Auto-enable if credentials are provided
       try {
         this.client = createClient(this.config.url, this.config.anonKey, {
           auth: { persistSession: false },
@@ -82,7 +91,10 @@ class SupabaseService {
   }
 
   public isConfigured(): boolean {
-    return !!(this.config.enabled && this.config.url && this.config.anonKey && this.client);
+    if (!this.client && this.config.url && this.config.anonKey) {
+      this.initClient();
+    }
+    return !!(this.config.url && this.config.anonKey && this.client);
   }
 
   public async testConnection(): Promise<{ success: boolean; message: string }> {
@@ -124,7 +136,7 @@ class SupabaseService {
         .from('mosque_config')
         .select('data')
         .eq('id', this.config.syncId || 'default')
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         return null;

@@ -13,15 +13,25 @@ export const CloudSyncSettings: React.FC = () => {
   const [copiedSql, setCopiedSql] = useState(false);
 
   useEffect(() => {
-    setConfig(supabaseService.loadConfig());
+    const loaded = supabaseService.loadConfig();
+    if (loaded.url && loaded.anonKey && !loaded.enabled) {
+      loaded.enabled = true;
+      supabaseService.saveConfig(loaded);
+    }
+    setConfig(loaded);
   }, []);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    supabaseService.saveConfig(config);
+    const updated = {
+      ...config,
+      enabled: config.url && config.anonKey ? (config.enabled !== false) : false,
+    };
+    setConfig(updated);
+    supabaseService.saveConfig(updated);
     setTestResult({
       success: true,
-      message: 'Konfigurasi Cloud Supabase berhasil disimpan di perangkat ini!',
+      message: 'Konfigurasi Cloud Supabase berhasil disimpan dan aktif!',
     });
   };
 

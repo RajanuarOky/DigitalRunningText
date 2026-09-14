@@ -127,6 +127,10 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (cloudData) {
           setData(cloudData);
           storageService.saveData(cloudData);
+        } else {
+          // Jika di Cloud belum ada data sama sekali, otomatis unggah data default ke Cloud
+          const currentLocal = storageService.loadData();
+          supabaseService.pushCloudData(currentLocal);
         }
       });
 
