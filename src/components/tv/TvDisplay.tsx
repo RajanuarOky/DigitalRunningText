@@ -30,7 +30,12 @@ export const TvDisplay: React.FC<TvDisplayProps> = ({ onNavigateToAdmin }) => {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col justify-between select-none">
+    <div
+      onClick={() => {
+        if (!isAudioUnlocked) unlockAudio();
+      }}
+      className="relative w-screen h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col justify-between select-none"
+    >
       {/* Background Decorative Pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/20 via-slate-950 to-slate-950 pointer-events-none" />
 

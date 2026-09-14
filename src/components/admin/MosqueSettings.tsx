@@ -4,14 +4,19 @@ import type { MosqueConfig, PrayerAdjustment } from '../../types';
 import { Building, MapPin, Compass, Save, CheckCircle2 } from 'lucide-react';
 
 const CITY_PRESETS: { name: string; lat: number; lng: number }[] = [
+  { name: 'Sidoarjo', lat: -7.4478, lng: 112.7178 },
+  { name: 'Surabaya', lat: -7.2575, lng: 112.7521 },
+  { name: 'Gresik', lat: -7.1566, lng: 112.6555 },
+  { name: 'Malang', lat: -7.9797, lng: 112.6304 },
   { name: 'DKI Jakarta', lat: -6.2088, lng: 106.8456 },
   { name: 'Bandung', lat: -6.9175, lng: 107.6191 },
-  { name: 'Surabaya', lat: -7.2575, lng: 112.7521 },
   { name: 'Semarang', lat: -6.9667, lng: 110.4167 },
   { name: 'Yogyakarta', lat: -7.7956, lng: 110.3695 },
+  { name: 'Solo / Surakarta', lat: -7.5666, lng: 110.8292 },
   { name: 'Medan', lat: 3.5952, lng: 98.6722 },
   { name: 'Makassar', lat: -5.1477, lng: 119.4327 },
   { name: 'Banjarmasin', lat: -3.3194, lng: 114.5908 },
+  { name: 'Denpasar / Bali', lat: -8.6705, lng: 115.2126 },
 ];
 
 export const MosqueSettings: React.FC = () => {

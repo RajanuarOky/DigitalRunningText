@@ -78,9 +78,9 @@ class AudioService {
   }
 
   /**
-   * Putar audio murottal tartil
+   * Putar audio murottal tartil dengan dukungan offset detik (jika melanjutkan setelah refresh TV)
    */
-  public playTartil(audioUrl: string, volume = 0.8): Promise<void> {
+  public playTartil(audioUrl: string, volume = 0.8, startOffsetSeconds = 0): Promise<void> {
     return new Promise((resolve, reject) => {
       this.stopTartil();
       if (!audioUrl) {
@@ -93,6 +93,15 @@ class AudioService {
         audio.volume = Math.max(0, Math.min(1, volume));
         this.currentTartilAudio = audio;
 
+        if (startOffsetSeconds > 0) {
+          const seekHandler = () => {
+            if (audio.duration && startOffsetSeconds < audio.duration) {
+              audio.currentTime = startOffsetSeconds;
+            }
+          };
+          audio.addEventListener('loadedmetadata', seekHandler, { once: true });
+        }
+
         audio.onended = () => resolve();
         audio.onerror = (e) => {
           console.warn('Error loading tartil audio file:', e);
@@ -101,10 +110,26 @@ class AudioService {
 
         const playPromise = audio.play();
         if (playPromise !== undefined) {
-          playPromise.then(() => resolve()).catch((err) => {
-            console.warn('Autoplay prevented or audio source failed:', err);
-            resolve();
-          });
+          playPromise
+            .then(() => {
+              this.isUnlocked = true;
+              resolve();
+            })
+            .catch((err) => {
+              console.warn('Autoplay prevented on refresh or audio source failed:', err);
+              // Jika browser menahan autoplay saat refresh, otomatis putar saat pengguna mengklik / menyentuh layar
+              const resumeOnInteraction = () => {
+                this.unlockAudio();
+                audio.play().catch(() => {});
+                window.removeEventListener('click', resumeOnInteraction);
+                window.removeEventListener('keydown', resumeOnInteraction);
+                window.removeEventListener('touchstart', resumeOnInteraction);
+              };
+              window.addEventListener('click', resumeOnInteraction, { once: true });
+              window.addEventListener('keydown', resumeOnInteraction, { once: true });
+              window.addEventListener('touchstart', resumeOnInteraction, { once: true });
+              resolve();
+            });
         }
       } catch (err) {
         console.error('Failed to initialize tartil audio:', err);

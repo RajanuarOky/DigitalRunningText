@@ -306,7 +306,8 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setActivePrayerTarget(nextPrayerName);
           setStateCountdownSeconds(secondsLeft);
           if (tartilConfig.audioUrl) {
-            audioService.playTartil(tartilConfig.audioUrl, currentData.tartil.volume);
+            const elapsedSeconds = Math.max(0, tartilWindowSeconds - secondsLeft);
+            audioService.playTartil(tartilConfig.audioUrl, currentData.tartil.volume, elapsedSeconds);
           }
         }
       }
