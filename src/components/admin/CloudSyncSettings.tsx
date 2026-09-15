@@ -253,6 +253,44 @@ alter publication supabase_realtime add table mosque_config;`;
         </div>
       </form>
 
+      {/* Link Cepat Khusus STB / Fully Kiosk Browser */}
+      {config.url && config.anonKey && (
+        <div className="bg-slate-900 border border-cyan-500/40 rounded-2xl p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <Globe className="w-4 h-4 text-cyan-400" />
+              <span>Link Khusus Browser TV STB (Auto-Connect Tanpa Ketik Key)</span>
+            </h4>
+            <button
+              type="button"
+              onClick={() => {
+                const stbUrl = `${window.location.origin}/?supabase_url=${encodeURIComponent(
+                  config.url
+                )}&supabase_key=${encodeURIComponent(config.anonKey)}&sync_id=${encodeURIComponent(
+                  config.syncId || 'default'
+                )}`;
+                navigator.clipboard.writeText(stbUrl);
+                setSyncNotice('✅ Link STB berhasil disalin! Buka link ini di Fully Kiosk TV STB Anda.');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold transition cursor-pointer"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Salin Link STB</span>
+            </button>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Cukup buka link ini 1x di browser STB Anda (atau masukkan ke <em>Start URL</em> Fully Kiosk). STB akan otomatis menyimpan kredensial Cloud dan langsung terhubung secara seketika tanpa perlu mengetik Anon Key yang panjang:
+          </p>
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-cyan-300 break-all select-all">
+            {`${typeof window !== 'undefined' ? window.location.origin : ''}/?supabase_url=${encodeURIComponent(
+              config.url
+            )}&supabase_key=${encodeURIComponent(config.anonKey)}&sync_id=${encodeURIComponent(
+              config.syncId || 'default'
+            )}`}
+          </div>
+        </div>
+      )}
+
       {/* Panduan 1-Click SQL Script Supabase */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-3">

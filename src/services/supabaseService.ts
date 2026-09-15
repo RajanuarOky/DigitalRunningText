@@ -31,6 +31,27 @@ class SupabaseService {
 
   public loadConfig(): SupabaseConfig {
     try {
+      // 1. Cek apakah ada kredensial yang dipassing via URL parameters (sangat berguna untuk setup cepat di STB)
+      // Contoh: ?supabase_key=xxx atau ?anonKey=xxx&url=xxx&syncId=xxx
+      if (typeof window !== 'undefined' && window.location) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlParamUrl = urlParams.get('supabase_url') || urlParams.get('url');
+        const urlParamKey = urlParams.get('supabase_key') || urlParams.get('anon_key') || urlParams.get('key');
+        const urlParamSyncId = urlParams.get('sync_id') || urlParams.get('syncId');
+
+        if (urlParamKey) {
+          const configFromUrl: SupabaseConfig = {
+            url: urlParamUrl || DEFAULT_SUPABASE_CONFIG.url,
+            anonKey: urlParamKey,
+            syncId: urlParamSyncId || 'default',
+            enabled: true,
+          };
+          localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(configFromUrl));
+          this.config = configFromUrl;
+          return this.config;
+        }
+      }
+
       const saved = localStorage.getItem(SUPABASE_CONFIG_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -200,14 +221,27 @@ class SupabaseService {
       | { action: 'PRAYER_MODE'; durationSeconds: number }
       | { action: 'RESET_NORMAL' }
   ) {
-    if (!this.client || !this.isConfigured() || !this.activeChannel) return;
+    if (!this.client || !this.isConfigured()) return;
+
+    const channelName = `mosque_tv_channel_${this.config.syncId || 'default'}`;
 
     try {
-      await this.activeChannel.send({
+      if (!this.activeChannel) {
+        this.activeChannel = this.client.channel(channelName);
+      }
+
+      // Pastikan channel tersubscribe
+      const channel = this.activeChannel;
+      if (channel.state !== 'joined' && channel.state !== 'joining') {
+        channel.subscribe();
+      }
+
+      await channel.send({
         type: 'broadcast',
         event: 'REMOTE_COMMAND',
         payload: command,
       });
+      console.log('📡 [Supabase Broadcast] Remote command sent successfully:', command);
     } catch (e) {
       console.warn('Gagal mengirim broadcast command:', e);
     }

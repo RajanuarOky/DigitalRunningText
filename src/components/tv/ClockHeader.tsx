@@ -3,6 +3,7 @@ import { useMosque } from '../../context/MosqueContext';
 import { formatTimeHMS } from '../../utils/formatters';
 import { getHijriDate, formatMasehiDate } from '../../utils/hijriDate';
 import { Volume2, VolumeX, Moon } from 'lucide-react';
+import { supabaseService } from '../../services/supabaseService';
 
 export const ClockHeader: React.FC = () => {
   const { data, currentTime, isAudioUnlocked, unlockAudio } = useMosque();
@@ -29,6 +30,23 @@ export const ClockHeader: React.FC = () => {
 
       {/* Tanggal & Jam */}
       <div className="flex items-center gap-6">
+        {/* Cloud Connection Status Indicator */}
+        <div
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold ${
+            supabaseService.isConfigured()
+              ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+              : 'bg-slate-800/60 text-slate-400 border-slate-700'
+          }`}
+          title={supabaseService.isConfigured() ? 'Cloud Sync Aktif (Tersambung ke Supabase)' : 'Cloud Standby (Lokal)'}
+        >
+          <span
+            className={`w-2 h-2 rounded-full ${
+              supabaseService.isConfigured() ? 'bg-cyan-400 animate-pulse' : 'bg-slate-500'
+            }`}
+          />
+          <span className="hidden md:inline">{supabaseService.isConfigured() ? 'Cloud Online' : 'Lokal'}</span>
+        </div>
+
         {/* Audio status indicator / unlock button */}
         {!isAudioUnlocked ? (
           <button
