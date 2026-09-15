@@ -78,63 +78,103 @@ class AudioService {
   }
 
   /**
-   * Putar audio murottal tartil dengan dukungan offset detik (jika melanjutkan setelah refresh TV)
+   * Putar audio murottal tartil dengan dukungan fallback URL dan autoplay recovery
    */
   public playTartil(audioUrl: string, volume = 0.8, startOffsetSeconds = 0): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       this.stopTartil();
       if (!audioUrl) {
         resolve();
         return;
       }
 
-      try {
-        const audio = new Audio(audioUrl);
-        audio.volume = Math.max(0, Math.min(1, volume));
-        this.currentTartilAudio = audio;
+      // Daftar kandidat URL: coba HTTPS original, lalu coba fallback domain mirrors jika ada kendala koneksi di STB
+      const candidates: string[] = [audioUrl];
 
-        if (startOffsetSeconds > 0) {
-          const seekHandler = () => {
-            if (audio.duration && startOffsetSeconds < audio.duration) {
-              audio.currentTime = startOffsetSeconds;
-            }
-          };
-          audio.addEventListener('loadedmetadata', seekHandler, { once: true });
+      // Jika URL dari islamic.network (misal https://cdn.islamic.network/quran/audio/128/ar.alafasy/67.mp3),
+      // tambahkan alternative link seperti everyayah.com atau HTTP mirror jika SSL bermasalah di Android lawas
+      if (audioUrl.includes('cdn.islamic.network/quran/audio/128/ar.alafasy/')) {
+        const surahMatch = audioUrl.match(/\/(\d+)\.mp3$/);
+        if (surahMatch) {
+          const surahNum = parseInt(surahMatch[1], 10);
+          const paddedSurah = String(surahNum).padStart(3, '0');
+          // Candidate 2: everyayah.com mirror
+          candidates.push(`https://everyayah.com/data/Alafasy_128kbps/${paddedSurah}001.mp3`);
+          // Candidate 3: HTTP fallback (untuk Android WebView STB lawas yang sertifikat SSL Let's Encrypt-nya expired)
+          candidates.push(audioUrl.replace('https://', 'http://'));
         }
-
-        audio.onended = () => resolve();
-        audio.onerror = (e) => {
-          console.warn('Error loading tartil audio file:', e);
-          reject(e);
-        };
-
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              this.isUnlocked = true;
-              resolve();
-            })
-            .catch((err) => {
-              console.warn('Autoplay prevented on refresh or audio source failed:', err);
-              // Jika browser menahan autoplay saat refresh, otomatis putar saat pengguna mengklik / menyentuh layar
-              const resumeOnInteraction = () => {
-                this.unlockAudio();
-                audio.play().catch(() => {});
-                window.removeEventListener('click', resumeOnInteraction);
-                window.removeEventListener('keydown', resumeOnInteraction);
-                window.removeEventListener('touchstart', resumeOnInteraction);
-              };
-              window.addEventListener('click', resumeOnInteraction, { once: true });
-              window.addEventListener('keydown', resumeOnInteraction, { once: true });
-              window.addEventListener('touchstart', resumeOnInteraction, { once: true });
-              resolve();
-            });
-        }
-      } catch (err) {
-        console.error('Failed to initialize tartil audio:', err);
-        resolve();
       }
+
+      let candidateIndex = 0;
+
+      const tryPlayCurrentCandidate = () => {
+        if (candidateIndex >= candidates.length) {
+          console.warn('⚠️ Semua sumber audio murottal gagal dimuat di STB.');
+          resolve();
+          return;
+        }
+
+        const currentUrl = candidates[candidateIndex];
+        try {
+          const audio = new Audio();
+          // Pengaturan penting untuk Android WebView & Cross-Origin media
+          audio.crossOrigin = 'anonymous';
+          audio.preload = 'auto';
+          audio.src = currentUrl;
+          audio.volume = Math.max(0, Math.min(1, volume));
+          this.currentTartilAudio = audio;
+
+          if (startOffsetSeconds > 0) {
+            const seekHandler = () => {
+              if (audio.duration && startOffsetSeconds < audio.duration) {
+                audio.currentTime = startOffsetSeconds;
+              }
+            };
+            audio.addEventListener('loadedmetadata', seekHandler, { once: true });
+          }
+
+          audio.onended = () => resolve();
+
+          audio.onerror = (e) => {
+            console.warn(`Gagal memuat URL audio [${candidateIndex + 1}/${candidates.length}]: ${currentUrl}`, e);
+            candidateIndex++;
+            tryPlayCurrentCandidate();
+          };
+
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                this.isUnlocked = true;
+                console.log('▶️ Berhasil memutar murottal di STB:', currentUrl);
+                resolve();
+              })
+              .catch((err) => {
+                console.warn('Autoplay prevented on STB or audio source interaction required:', err);
+                // Listener sentuh/klik jika browser STB memblokir autoplay audio MP3
+                const resumeOnInteraction = () => {
+                  this.unlockAudio();
+                  if (this.currentTartilAudio) {
+                    this.currentTartilAudio.play().catch(() => {});
+                  }
+                  window.removeEventListener('click', resumeOnInteraction);
+                  window.removeEventListener('keydown', resumeOnInteraction);
+                  window.removeEventListener('touchstart', resumeOnInteraction);
+                };
+                window.addEventListener('click', resumeOnInteraction, { once: true });
+                window.addEventListener('keydown', resumeOnInteraction, { once: true });
+                window.addEventListener('touchstart', resumeOnInteraction, { once: true });
+                resolve();
+              });
+          }
+        } catch (err) {
+          console.error('Failed to initialize tartil audio candidate:', err);
+          candidateIndex++;
+          tryPlayCurrentCandidate();
+        }
+      };
+
+      tryPlayCurrentCandidate();
     });
   }
 
