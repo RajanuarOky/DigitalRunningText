@@ -17,34 +17,10 @@
         height: 100vh;
         overflow: hidden;
       }
-      #error-boundary-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 99999;
-        background: #090d16;
-        color: #fca5a5;
-        padding: 24px;
-        font-family: monospace;
-      }
     </style>
-    <script>
-      // Catcher jika ada error script di STB Android lama
-      window.addEventListener('error', function (e) {
-        var overlay = document.getElementById('error-boundary-overlay');
-        if (overlay) {
-          overlay.style.display = 'block';
-          overlay.innerHTML = '<h3 style="color:#ef4444;margin-top:0">Terjadi Kendala Memuat di STB:</h3>' +
-            '<p style="color:#f87171">' + (e.message || 'Unknown script error') + '</p>' +
-            '<p style="color:#94a3b8;font-size:12px">File: ' + (e.filename || '') + ' line: ' + (e.lineno || '') + '</p>' +
-            '<p style="color:#cbd5e1;font-size:13px">Tips: Perbarui "Android System WebView" di STB atau gunakan browser Chrome / Fully Kiosk versi terbaru.</p>';
-        }
-      });
-    </script>
   </head>
   <body>
     <div id="root"></div>
-    <div id="error-boundary-overlay"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
