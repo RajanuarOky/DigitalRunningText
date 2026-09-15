@@ -33,27 +33,27 @@ export const RunningTicker: React.FC = () => {
           {displayItems.map((item: RunningTextItem, idx: number) => (
             <div
               key={`${item.id}-${idx}`}
-              className="flex items-center gap-3 shrink-0 whitespace-nowrap pr-12"
+              className="inline-flex items-center shrink-0 whitespace-nowrap mr-12"
             >
               {item.category === 'infaq' && (
-                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 mr-3">
                   <HeartHandshake className="w-3.5 h-3.5" /> Infaq
                 </span>
               )}
               {item.category === 'hadits' && (
-                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 shrink-0">
+                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 shrink-0 mr-3">
                   <Sparkles className="w-3.5 h-3.5" /> Hadits
                 </span>
               )}
               {(!item.category || item.category === 'info') && (
-                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0 mr-3">
                   <Info className="w-3.5 h-3.5" /> Info
                 </span>
               )}
               <span className="text-slate-100 text-sm lg:text-base font-medium tracking-wide whitespace-nowrap">
                 {item.text}
               </span>
-              <span className="text-emerald-400 font-bold ml-6 text-xs select-none">✦</span>
+              <span className="text-emerald-400 font-bold ml-8 text-xs select-none">✦</span>
             </div>
           ))}
         </div>

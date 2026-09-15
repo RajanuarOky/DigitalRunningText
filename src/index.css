@@ -34,11 +34,21 @@
 
 .animate-marquee {
   display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  width: -webkit-max-content !important;
+  width: -moz-max-content !important;
   width: max-content !important;
   flex-shrink: 0 !important;
   white-space: nowrap !important;
   animation: marquee 40s linear infinite;
   will-change: transform;
+}
+
+.animate-marquee * {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .animate-marquee:hover {

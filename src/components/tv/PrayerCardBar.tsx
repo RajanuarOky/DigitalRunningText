@@ -27,8 +27,8 @@ export const PrayerCardBar: React.FC = () => {
   ];
 
   return (
-    <div className="w-full px-6 py-3">
-      <div className="grid grid-cols-6 gap-3 lg:gap-4">
+    <div className="w-full px-4 lg:px-6 py-2">
+      <div className="grid grid-cols-6 gap-2 lg:gap-3">
         {prayerList.map(({ key, label, time }) => {
           const isTargeted = activePrayerTarget === key;
           const isAdzanNow = isTargeted && displayState === 'ADZAN';
@@ -39,15 +39,15 @@ export const PrayerCardBar: React.FC = () => {
           return (
             <div
               key={key}
-              className={`relative overflow-hidden rounded-2xl transition-all duration-300 flex flex-col items-center justify-between py-3 px-2 border ${
+              className={`relative overflow-hidden rounded-xl lg:rounded-2xl transition-all duration-300 flex flex-col items-center justify-between py-2 lg:py-2.5 px-1.5 lg:px-2 border ${
                 isAdzanNow
-                  ? 'bg-gradient-to-b from-amber-900/95 via-yellow-900/90 to-slate-900/95 border-amber-400 shadow-2xl shadow-amber-500/40 scale-[1.05] z-20 animate-subtle-pulse'
+                  ? 'bg-gradient-to-b from-amber-900/95 via-yellow-900/90 to-slate-900/95 border-amber-400 shadow-2xl shadow-amber-500/40 z-20 animate-subtle-pulse ring-2 ring-amber-400'
                   : isTartilNow
-                  ? 'bg-gradient-to-b from-teal-900/90 via-emerald-800/80 to-slate-900/95 border-teal-400 shadow-xl shadow-teal-500/30 scale-[1.03] z-10'
+                  ? 'bg-gradient-to-b from-teal-900/90 via-emerald-800/80 to-slate-900/95 border-teal-400 shadow-xl shadow-teal-500/30 z-10 ring-1 ring-teal-400'
                   : isIqomahNow
-                  ? 'bg-gradient-to-b from-indigo-900/90 via-blue-900/80 to-slate-900/95 border-indigo-400 shadow-xl shadow-indigo-500/30 scale-[1.03] z-10'
+                  ? 'bg-gradient-to-b from-indigo-900/90 via-blue-900/80 to-slate-900/95 border-indigo-400 shadow-xl shadow-indigo-500/30 z-10 ring-1 ring-indigo-400'
                   : isNext
-                  ? 'bg-gradient-to-b from-emerald-900/90 via-emerald-800/80 to-slate-900/95 border-emerald-400 shadow-xl shadow-emerald-500/20 scale-[1.03] z-10'
+                  ? 'bg-gradient-to-b from-emerald-900/90 via-emerald-800/80 to-slate-900/95 border-emerald-400 shadow-xl shadow-emerald-500/20 z-10 ring-1 ring-emerald-400'
                   : 'bg-slate-900/70 backdrop-blur-md border-slate-800/80 hover:border-slate-700'
               }`}
             >

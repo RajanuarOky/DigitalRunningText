@@ -59,8 +59,8 @@ export const MediaSlider: React.FC = () => {
   const slideDuration = Math.max(3, slide?.durationSeconds || 10);
 
   return (
-    <div className="flex-1 w-full px-6 py-2 overflow-hidden flex flex-col justify-center group relative">
-      <div className="relative w-full h-full min-h-[320px] rounded-3xl overflow-hidden bg-slate-900/90 border border-slate-800 shadow-2xl flex flex-col">
+    <div className="flex-1 w-full px-6 py-2 min-h-0 overflow-hidden flex flex-col justify-center group relative">
+      <div className="relative w-full h-full min-h-0 rounded-3xl overflow-hidden bg-slate-900/90 border border-slate-800 shadow-2xl flex flex-col">
         {/* Progress Bar Durasi Slide */}
         {activeBanners.length > 1 && (
           <div className="absolute top-0 inset-x-0 h-1 bg-slate-800/80 z-30 overflow-hidden">
@@ -76,7 +76,7 @@ export const MediaSlider: React.FC = () => {
 
         {/* 1. Slide Poster / Agenda Kajian */}
         {slide.type === 'poster' && (
-          <div className="relative w-full h-full flex flex-col justify-end p-8 lg:p-12 animate-in fade-in duration-500">
+          <div className="relative w-full h-full flex flex-col justify-end p-6 lg:p-10 animate-in fade-in duration-500">
             {slide.imageUrl && (
               <img
                 src={slide.imageUrl}
@@ -87,15 +87,15 @@ export const MediaSlider: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
 
             <div className="relative z-10 max-w-4xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
                 <Calendar className="w-3.5 h-3.5" />
                 <span>Agenda Kegiatan</span>
               </div>
-              <h2 className="text-3xl lg:text-5xl font-black text-white leading-tight mb-4 drop-shadow-md">
+              <h2 className="text-2xl lg:text-4xl font-black text-white leading-tight mb-2 lg:mb-3 drop-shadow-md">
                 {slide.title}
               </h2>
               {slide.content && (
-                <p className="text-base lg:text-xl text-slate-200 leading-relaxed max-w-3xl drop-shadow">
+                <p className="text-sm lg:text-lg text-slate-200 leading-relaxed max-w-3xl drop-shadow">
                   {slide.content}
                 </p>
               )}
@@ -105,61 +105,61 @@ export const MediaSlider: React.FC = () => {
 
         {/* 2. Slide Laporan Kas Keuangan Masjid */}
         {slide.type === 'kas' && (
-          <div className="w-full h-full p-8 lg:p-12 flex flex-col justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-emerald-950/40 animate-in fade-in duration-500">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                <Wallet className="w-6 h-6" />
+          <div className="w-full h-full p-5 lg:p-8 flex flex-col justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-emerald-950/40 animate-in fade-in duration-500">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <Wallet className="w-5 h-5 lg:w-6 lg:h-6" />
               </div>
               <div>
-                <h2 className="text-2xl lg:text-3xl font-black text-white tracking-wide uppercase">
+                <h2 className="text-xl lg:text-2xl font-black text-white tracking-wide uppercase">
                   Laporan Keuangan Kas Masjid
                 </h2>
-                <p className="text-xs lg:text-sm text-emerald-300">
+                <p className="text-xs text-emerald-300">
                   Periode: {data.finance.period}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 lg:gap-6 mt-2">
-              <div className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 flex flex-col">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <div className="grid grid-cols-3 gap-3 lg:gap-5 mt-1">
+              <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3.5 lg:p-4 flex flex-col">
+                <span className="text-[11px] lg:text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Saldo Awal
                 </span>
-                <span className="text-xl lg:text-3xl font-extrabold text-slate-200 mt-2">
+                <span className="text-base lg:text-2xl font-extrabold text-slate-200 mt-1">
                   {formatCurrencyIDR(data.finance.initialBalance)}
                 </span>
               </div>
 
-              <div className="bg-emerald-950/40 border border-emerald-600/40 rounded-2xl p-5 flex flex-col">
+              <div className="bg-emerald-950/40 border border-emerald-600/40 rounded-xl p-3.5 lg:p-4 flex flex-col">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                  <span className="text-[11px] lg:text-xs font-bold text-emerald-400 uppercase tracking-wider">
                     Pemasukan Infaq
                   </span>
-                  <ArrowUpRight className="w-5 h-5 text-emerald-400" />
+                  <ArrowUpRight className="w-4 h-4 text-emerald-400" />
                 </div>
-                <span className="text-xl lg:text-3xl font-extrabold text-emerald-300 mt-2">
+                <span className="text-base lg:text-2xl font-extrabold text-emerald-300 mt-1">
                   + {formatCurrencyIDR(data.finance.income)}
                 </span>
               </div>
 
-              <div className="bg-rose-950/30 border border-rose-600/40 rounded-2xl p-5 flex flex-col">
+              <div className="bg-rose-950/30 border border-rose-600/40 rounded-xl p-3.5 lg:p-4 flex flex-col">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-rose-400 uppercase tracking-wider">
-                    Pengeluaran Operasional
+                  <span className="text-[11px] lg:text-xs font-bold text-rose-400 uppercase tracking-wider">
+                    Pengeluaran
                   </span>
-                  <ArrowDownRight className="w-5 h-5 text-rose-400" />
+                  <ArrowDownRight className="w-4 h-4 text-rose-400" />
                 </div>
-                <span className="text-xl lg:text-3xl font-extrabold text-rose-300 mt-2">
+                <span className="text-base lg:text-2xl font-extrabold text-rose-300 mt-1">
                   - {formatCurrencyIDR(data.finance.expense)}
                 </span>
               </div>
             </div>
 
-            <div className="mt-6 bg-gradient-to-r from-emerald-900/60 to-slate-900 border border-emerald-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg">
-              <span className="text-sm lg:text-lg font-bold text-white tracking-wider uppercase">
+            <div className="mt-3 lg:mt-4 bg-gradient-to-r from-emerald-900/60 to-slate-900 border border-emerald-500/50 rounded-xl p-3.5 lg:p-4 flex items-center justify-between shadow-lg">
+              <span className="text-xs lg:text-base font-bold text-white tracking-wider uppercase">
                 Saldo Akhir Kas Masjid
               </span>
-              <span className="text-2xl lg:text-4xl font-black text-amber-300 tracking-wide">
+              <span className="text-xl lg:text-3xl font-black text-amber-300 tracking-wide">
                 {formatCurrencyIDR(data.finance.finalBalance)}
               </span>
             </div>

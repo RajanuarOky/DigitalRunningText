@@ -17,11 +17,11 @@ export const ClockHeader: React.FC = () => {
             <Moon className="w-8 h-8 text-emerald-300" />
           </div>
         </div>
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-black tracking-wide text-white font-serif uppercase">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-wide text-white font-serif uppercase truncate">
             {data.mosque.name}
           </h1>
-          <p className="text-xs lg:text-sm text-emerald-300/80 font-medium">
+          <p className="text-xs lg:text-sm text-emerald-300/80 font-medium truncate">
             {data.mosque.address}
           </p>
         </div>
