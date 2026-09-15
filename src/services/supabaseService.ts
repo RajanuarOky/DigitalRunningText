@@ -36,8 +36,8 @@ class SupabaseService {
         const parsed = JSON.parse(saved);
         const url = parsed.url || DEFAULT_SUPABASE_CONFIG.url;
         const anonKey = parsed.anonKey || DEFAULT_SUPABASE_CONFIG.anonKey;
-        // Otomatis aktif jika URL dan Anon Key tersedia
-        const isEnabled = (url && anonKey) ? (parsed.enabled !== false) : false;
+        // Selalu aktif otomatis selama URL dan Anon Key terisi
+        const isEnabled = Boolean(url && anonKey);
         this.config = {
           ...DEFAULT_SUPABASE_CONFIG,
           ...parsed,
@@ -59,8 +59,11 @@ class SupabaseService {
   }
 
   public saveConfig(newConfig: SupabaseConfig) {
-    this.config = newConfig;
-    localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(newConfig));
+    this.config = {
+      ...newConfig,
+      enabled: Boolean(newConfig.url && newConfig.anonKey),
+    };
+    localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(this.config));
     this.initClient();
   }
 
