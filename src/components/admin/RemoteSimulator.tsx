@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useMosque } from '../../context/MosqueContext';
-import { audioService } from '../../services/audioService';
 import type { PrayerName } from '../../types';
 import {
   Play,
@@ -31,6 +30,7 @@ export const RemoteSimulator: React.FC<RemoteSimulatorProps> = ({ onOpenTv }) =>
     simulateIqomah,
     simulatePrayerMode,
     resetToNormal,
+    testSound,
   } = useMosque();
 
   const [selectedPrayer, setSelectedPrayer] = useState<PrayerName>('maghrib');
@@ -257,21 +257,27 @@ export const RemoteSimulator: React.FC<RemoteSimulatorProps> = ({ onOpenTv }) =>
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => audioService.playBeep(880, 0.3, 'sine')}
+            onClick={() =>
+              triggerWithToast(() => testSound('beep'), 'Perintah Tes Beep dikirim ke TV & Speaker!')
+            }
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
           >
             🔊 Tes Beep Standar
           </button>
           <button
             type="button"
-            onClick={() => audioService.playAdzanChime()}
+            onClick={() =>
+              triggerWithToast(() => testSound('chime'), 'Perintah Tes Chime Adzan dikirim ke TV & Speaker!')
+            }
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold transition cursor-pointer"
           >
             🔔 Tes Chime Adzan (Do-Mi-Sol-Do)
           </button>
           <button
             type="button"
-            onClick={() => audioService.playIqomahAlert()}
+            onClick={() =>
+              triggerWithToast(() => testSound('iqomah'), 'Perintah Tes Alarm Iqomah dikirim ke TV & Speaker!')
+            }
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 text-xs font-bold transition cursor-pointer"
           >
             ⚠️ Tes Alarm Iqomah Terakhir

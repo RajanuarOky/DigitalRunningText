@@ -28,6 +28,7 @@ interface MosqueContextType {
   simulateIqomah: (prayerName?: PrayerName, minutes?: number) => void;
   simulatePrayerMode: (minutes?: number) => void;
   resetToNormal: () => void;
+  testSound: (sound: 'beep' | 'chime' | 'iqomah') => void;
 }
 
 const MosqueContext = createContext<MosqueContextType | undefined>(undefined);
@@ -112,6 +113,12 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setStateCountdownSeconds(0);
   }, []);
 
+  const applyLocalTestSound = useCallback((sound: 'beep' | 'chime' | 'iqomah') => {
+    if (sound === 'beep') audioService.playBeep(880, 0.3, 'sine');
+    if (sound === 'chime') audioService.playAdzanChime();
+    if (sound === 'iqomah') audioService.playIqomahAlert();
+  }, []);
+
   // Listener Cross-Tab Synchronization & Cloud Realtime
   useEffect(() => {
     // 1. Cross-Tab Local Broadcast Listener
@@ -131,6 +138,9 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           break;
         case 'RESET_NORMAL':
           applyLocalReset();
+          break;
+        case 'TEST_SOUND':
+          applyLocalTestSound(msg.sound);
           break;
         case 'SYNC_DATA':
           setData(msg.data);
@@ -162,6 +172,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (cmd.action === 'IQOMAH') applyLocalSimulateIqomah(cmd.prayerName, cmd.durationSeconds);
           if (cmd.action === 'PRAYER_MODE') applyLocalSimulatePrayerMode(cmd.durationSeconds);
           if (cmd.action === 'RESET_NORMAL') applyLocalReset();
+          if (cmd.action === 'TEST_SOUND' && cmd.sound) applyLocalTestSound(cmd.sound);
         }
       );
     }
@@ -175,6 +186,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     applyLocalSimulateIqomah,
     applyLocalSimulatePrayerMode,
     applyLocalReset,
+    applyLocalTestSound,
   ]);
 
   const updateData = useCallback((updater: (prev: SystemData) => SystemData) => {
@@ -372,6 +384,17 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
+  const testSound = useCallback((sound: 'beep' | 'chime' | 'iqomah') => {
+    applyLocalTestSound(sound);
+    channelService.broadcast({
+      type: 'TEST_SOUND',
+      sound,
+    });
+    if (supabaseService.isConfigured()) {
+      supabaseService.sendRemoteCommand({ action: 'TEST_SOUND', sound });
+    }
+  }, [applyLocalTestSound]);
+
   return (
     <MosqueContext.Provider
       value={{
@@ -390,6 +413,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         simulateIqomah,
         simulatePrayerMode,
         resetToNormal,
+        testSound,
       }}
     >
       {children}

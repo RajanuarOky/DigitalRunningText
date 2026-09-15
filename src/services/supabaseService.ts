@@ -220,6 +220,7 @@ class SupabaseService {
       | { action: 'IQOMAH'; prayerName: PrayerName; durationSeconds: number }
       | { action: 'PRAYER_MODE'; durationSeconds: number }
       | { action: 'RESET_NORMAL' }
+      | { action: 'TEST_SOUND'; sound: 'beep' | 'chime' | 'iqomah' }
   ) {
     if (!this.client || !this.isConfigured()) return;
 
@@ -252,7 +253,7 @@ class SupabaseService {
    */
   public subscribeRealtime(
     onDataUpdated: (newData: SystemData) => void,
-    onCommandReceived?: (cmd: { action: string; prayerName?: PrayerName; durationSeconds?: number }) => void
+    onCommandReceived?: (cmd: { action: string; prayerName?: PrayerName; durationSeconds?: number; sound?: 'beep' | 'chime' | 'iqomah' }) => void
   ) {
     if (!this.client || !this.isConfigured()) return;
 
