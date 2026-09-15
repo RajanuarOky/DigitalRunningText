@@ -19,12 +19,14 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@csstools/postcss-cascade-layers": "^6.0.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-legacy": "^8.2.3",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
+    "postcss": "^8.5.28",
     "terser": "^5.51.2",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
