@@ -7,27 +7,27 @@ import { Disc, Play, Square, Save, CheckCircle2, Clock, Volume2, Moon } from 'lu
 const AUDIO_PRESETS = [
   {
     label: 'QS. As-Sajdah - Mishary Rashid',
-    url: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/32.mp3',
+    url: 'https://server8.mp3quran.net/afs/032.mp3',
   },
   {
     label: 'QS. Yasin - Mishary Rashid',
-    url: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/36.mp3',
+    url: 'https://server8.mp3quran.net/afs/036.mp3',
   },
   {
     label: 'QS. Ar-Rahman - Mishary Rashid',
-    url: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/55.mp3',
+    url: 'https://server8.mp3quran.net/afs/055.mp3',
   },
   {
     label: 'QS. Al-Waqi\'ah - Mishary Rashid',
-    url: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/56.mp3',
+    url: 'https://server8.mp3quran.net/afs/056.mp3',
   },
   {
     label: 'QS. Al-Mulk - Mishary Rashid',
-    url: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/67.mp3',
+    url: 'https://server8.mp3quran.net/afs/067.mp3',
   },
   {
     label: 'QS. Al-Insan - Mishary Rashid',
-    url: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/76.mp3',
+    url: 'https://server8.mp3quran.net/afs/076.mp3',
   },
 ];
 

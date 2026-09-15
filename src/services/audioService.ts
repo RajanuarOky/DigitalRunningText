@@ -4,10 +4,15 @@
  * dan HTML5 Audio untuk pemutaran murottal MP3.
  */
 
+export type TartilAudioStatus = 'idle' | 'loading' | 'playing' | 'error' | 'blocked';
+
 class AudioService {
   private audioCtx: AudioContext | null = null;
   private currentTartilAudio: HTMLAudioElement | null = null;
+  private currentTartilUrl: string | null = null;
   private isUnlocked = false;
+  private tartilStatus: TartilAudioStatus = 'idle';
+  private statusListeners: Set<(status: TartilAudioStatus) => void> = new Set();
 
   private initAudioContext() {
     if (!this.audioCtx) {
@@ -24,10 +29,48 @@ class AudioService {
   public unlockAudio() {
     this.initAudioContext();
     this.isUnlocked = true;
+
+    // Trigger dummy playback to unlock HTMLMediaElement in Android WebView
+    try {
+      const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+      silentAudio.play().then(() => silentAudio.pause()).catch(() => {});
+    } catch {
+      // ignore
+    }
+
+    // If tartil audio is currently loaded but paused due to autoplay restriction, resume it immediately
+    if (this.currentTartilAudio && this.currentTartilAudio.paused) {
+      this.currentTartilAudio.play().then(() => {
+        this.setTartilStatus('playing');
+      }).catch((e) => {
+        console.warn('Resume on unlock failed:', e);
+      });
+    }
   }
 
   public getUnlocked(): boolean {
     return this.isUnlocked;
+  }
+
+  public getTartilStatus(): TartilAudioStatus {
+    return this.tartilStatus;
+  }
+
+  public subscribeTartilStatus(listener: (status: TartilAudioStatus) => void): () => void {
+    this.statusListeners.add(listener);
+    listener(this.tartilStatus);
+    return () => this.statusListeners.delete(listener);
+  }
+
+  private setTartilStatus(status: TartilAudioStatus) {
+    this.tartilStatus = status;
+    this.statusListeners.forEach((fn) => {
+      try {
+        fn(status);
+      } catch (err) {
+        console.error('Status listener error:', err);
+      }
+    });
   }
 
   /**
@@ -82,27 +125,44 @@ class AudioService {
    */
   public playTartil(audioUrl: string, volume = 0.8, startOffsetSeconds = 0): Promise<void> {
     return new Promise((resolve) => {
-      this.stopTartil();
       if (!audioUrl) {
+        this.stopTartil();
         resolve();
         return;
       }
 
-      // Daftar kandidat URL: coba HTTPS original, lalu coba fallback domain mirrors jika ada kendala koneksi di STB
-      const candidates: string[] = [audioUrl];
+      // Jika URL yang sama sudah sedang berputar, jangan di-restart untuk mencegah interupsi audio
+      if (this.currentTartilAudio && this.currentTartilUrl === audioUrl && !this.currentTartilAudio.paused) {
+        this.currentTartilAudio.volume = Math.max(0, Math.min(1, volume));
+        this.setTartilStatus('playing');
+        resolve();
+        return;
+      }
 
-      // Jika URL dari islamic.network (misal https://cdn.islamic.network/quran/audio/128/ar.alafasy/67.mp3),
-      // tambahkan alternative link seperti everyayah.com atau HTTP mirror jika SSL bermasalah di Android lawas
-      if (audioUrl.includes('cdn.islamic.network/quran/audio/128/ar.alafasy/')) {
-        const surahMatch = audioUrl.match(/\/(\d+)\.mp3$/);
-        if (surahMatch) {
-          const surahNum = parseInt(surahMatch[1], 10);
+      this.stopTartil();
+      this.currentTartilUrl = audioUrl;
+      this.setTartilStatus('loading');
+
+      // Daftar kandidat URL: prioritaskan Cloudflare CDN berkecepatan tinggi (mp3quran) jika surah terdeteksi
+      const candidates: string[] = [];
+
+      const surahMatch = audioUrl.match(/(?:audio|audio-surah|afs)?\/.*?(\d{1,3})\.mp3(?:$|\?)/i) || audioUrl.match(/(\d{1,3})\.mp3(?:$|\?)/);
+      if (surahMatch) {
+        const surahNum = parseInt(surahMatch[1], 10);
+        if (surahNum >= 1 && surahNum <= 114) {
           const paddedSurah = String(surahNum).padStart(3, '0');
-          // Candidate 2: everyayah.com mirror
+          // Prioritas 1: server8.mp3quran.net (Cloudflare CDN, full surah, CORS Access-Control-Allow-Origin: *)
+          candidates.push(`https://server8.mp3quran.net/afs/${paddedSurah}.mp3`);
+          // Prioritas 2: everyayah.com
           candidates.push(`https://everyayah.com/data/Alafasy_128kbps/${paddedSurah}001.mp3`);
-          // Candidate 3: HTTP fallback (untuk Android WebView STB lawas yang sertifikat SSL Let's Encrypt-nya expired)
-          candidates.push(audioUrl.replace('https://', 'http://'));
+          // Prioritas 3: cdn.islamic.network full surah endpoint
+          candidates.push(`https://cdn.islamic.network/quran/audio-surah/128/ar.alafasy/${surahNum}.mp3`);
         }
+      }
+
+      // Masukkan original audioUrl jika belum ada di list
+      if (!candidates.includes(audioUrl)) {
+        candidates.push(audioUrl);
       }
 
       let candidateIndex = 0;
@@ -110,6 +170,7 @@ class AudioService {
       const tryPlayCurrentCandidate = () => {
         if (candidateIndex >= candidates.length) {
           console.warn('⚠️ Semua sumber audio murottal gagal dimuat di STB.');
+          this.setTartilStatus('error');
           resolve();
           return;
         }
@@ -117,8 +178,8 @@ class AudioService {
         const currentUrl = candidates[candidateIndex];
         try {
           const audio = new Audio();
-          // Pengaturan penting untuk Android WebView & Cross-Origin media
-          audio.crossOrigin = 'anonymous';
+          // Catatan penting: JANGAN set audio.crossOrigin = 'anonymous'!
+          // Menyetel crossOrigin akan memaksa pengecekan CORS yang memblokir CDN audio tanpa header CORS.
           audio.preload = 'auto';
           audio.src = currentUrl;
           audio.volume = Math.max(0, Math.min(1, volume));
@@ -133,7 +194,10 @@ class AudioService {
             audio.addEventListener('loadedmetadata', seekHandler, { once: true });
           }
 
-          audio.onended = () => resolve();
+          audio.onended = () => {
+            this.setTartilStatus('idle');
+            resolve();
+          };
 
           audio.onerror = (e) => {
             console.warn(`Gagal memuat URL audio [${candidateIndex + 1}/${candidates.length}]: ${currentUrl}`, e);
@@ -146,16 +210,21 @@ class AudioService {
             playPromise
               .then(() => {
                 this.isUnlocked = true;
+                this.setTartilStatus('playing');
                 console.log('▶️ Berhasil memutar murottal di STB:', currentUrl);
                 resolve();
               })
               .catch((err) => {
-                console.warn('Autoplay prevented on STB or audio source interaction required:', err);
-                // Listener sentuh/klik jika browser STB memblokir autoplay audio MP3
+                console.warn('Autoplay dicegah oleh STB / membutuhkan interaksi pengguna:', err);
+                this.setTartilStatus('blocked');
+
+                // Pasang listener interaksi sekali untuk auto-resume jika layar disentuh / remote ditekan
                 const resumeOnInteraction = () => {
                   this.unlockAudio();
                   if (this.currentTartilAudio) {
-                    this.currentTartilAudio.play().catch(() => {});
+                    this.currentTartilAudio.play().then(() => {
+                      this.setTartilStatus('playing');
+                    }).catch(() => {});
                   }
                   window.removeEventListener('click', resumeOnInteraction);
                   window.removeEventListener('keydown', resumeOnInteraction);
@@ -179,28 +248,21 @@ class AudioService {
   }
 
   /**
-   * Hentikan audio murottal dengan fade out lembut
+   * Hentikan audio murottal
    */
   public stopTartil() {
     if (this.currentTartilAudio) {
       try {
-        const audio = this.currentTartilAudio;
-        let vol = audio.volume;
-        const fadeInterval = setInterval(() => {
-          vol -= 0.1;
-          if (vol <= 0.05) {
-            clearInterval(fadeInterval);
-            audio.pause();
-            audio.currentTime = 0;
-          } else {
-            audio.volume = vol;
-          }
-        }, 50);
-      } catch {
         this.currentTartilAudio.pause();
+        this.currentTartilAudio.removeAttribute('src');
+        this.currentTartilAudio.load();
+      } catch (err) {
+        console.warn('Error stopping tartil audio:', err);
       }
       this.currentTartilAudio = null;
     }
+    this.currentTartilUrl = null;
+    this.setTartilStatus('idle');
   }
 
   public isTartilPlaying(): boolean {

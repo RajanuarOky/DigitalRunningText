@@ -30,31 +30,31 @@ export const DEFAULT_DATA: SystemData = {
         enabled: true,
         minutesBefore: 15,
         audioTitle: 'QS. As-Sajdah (Mishary Rashid)',
-        audioUrl: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/32.mp3',
+        audioUrl: 'https://server8.mp3quran.net/afs/032.mp3',
       },
       dhuhr: {
         enabled: true,
         minutesBefore: 10,
         audioTitle: 'QS. Ar-Rahman (Mishary Rashid)',
-        audioUrl: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/55.mp3',
+        audioUrl: 'https://server8.mp3quran.net/afs/055.mp3',
       },
       asr: {
         enabled: true,
         minutesBefore: 10,
         audioTitle: 'QS. Al-Waqi\'ah (Mishary Rashid)',
-        audioUrl: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/56.mp3',
+        audioUrl: 'https://server8.mp3quran.net/afs/056.mp3',
       },
       maghrib: {
         enabled: true,
         minutesBefore: 10,
         audioTitle: 'QS. Al-Mulk (Mishary Rashid)',
-        audioUrl: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/67.mp3',
+        audioUrl: 'https://server8.mp3quran.net/afs/067.mp3',
       },
       isha: {
         enabled: true,
         minutesBefore: 10,
         audioTitle: 'QS. Yasin (Mishary Rashid)',
-        audioUrl: 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/36.mp3',
+        audioUrl: 'https://server8.mp3quran.net/afs/036.mp3',
       },
     },
   },
@@ -156,14 +156,37 @@ export const storageService = {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return {
+        const loaded: SystemData = {
           ...DEFAULT_DATA,
           ...parsed,
           mosque: { ...DEFAULT_DATA.mosque, ...(parsed.mosque || {}) },
-          tartil: { ...DEFAULT_DATA.tartil, ...(parsed.tartil || {}) },
+          tartil: {
+            ...DEFAULT_DATA.tartil,
+            ...(parsed.tartil || {}),
+            prayers: {
+              ...DEFAULT_DATA.tartil.prayers,
+              ...(parsed.tartil?.prayers || {}),
+            },
+          },
           iqomah: { ...DEFAULT_DATA.iqomah, ...(parsed.iqomah || {}) },
           prayerMode: { ...DEFAULT_DATA.prayerMode, ...(parsed.prayerMode || {}) },
         };
+
+        // Migrasi URL murottal legacy ke mirror CDN cepat server8.mp3quran.net
+        if (loaded.tartil && loaded.tartil.prayers) {
+          const prayers = loaded.tartil.prayers;
+          (Object.keys(prayers) as Array<keyof typeof prayers>).forEach((key) => {
+            const p = prayers[key];
+            if (p && p.audioUrl && p.audioUrl.includes('cdn.islamic.network')) {
+              const m = p.audioUrl.match(/\/(\d+)\.mp3/);
+              if (m) {
+                p.audioUrl = `https://server8.mp3quran.net/afs/${m[1].padStart(3, '0')}.mp3`;
+              }
+            }
+          });
+        }
+
+        return loaded;
       }
     } catch (e) {
       console.warn('Gagal membaca localStorage, gunakan default:', e);
