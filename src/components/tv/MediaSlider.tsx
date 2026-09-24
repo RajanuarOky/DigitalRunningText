@@ -170,45 +170,48 @@ export const MediaSlider: React.FC<MediaSliderProps> = React.memo(({ data }) => 
 
         {/* 3. Slide Petugas Jum'at */}
         {slide.type === 'jumat' && (
-          <div className="w-full h-full p-8 lg:p-12 flex flex-col justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950/40 animate-in fade-in duration-500">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-                <Users className="w-6 h-6" />
+          <div className="w-full h-full p-6 lg:p-10 flex flex-col justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 animate-in fade-in duration-500">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shrink-0">
+                <Users className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-2xl lg:text-3xl font-black text-white tracking-wide uppercase">
+                <h2 className="text-xl lg:text-2xl font-black text-white tracking-wide uppercase font-sans">
                   Petugas Shalat Jum'at
                 </h2>
-                <p className="text-xs lg:text-sm text-indigo-300">
-                  {data.friday.date}
+                <p className="text-xs text-amber-400 font-semibold mt-0.5">
+                  Jum'at Ini • {data.friday.date}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-6 mt-4">
-              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 flex flex-col items-center text-center">
-                <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3">
+            <div className="grid grid-cols-3 gap-5">
+              {/* Khatib */}
+              <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-emerald-500/40 rounded-2xl p-5 flex flex-col items-center text-center shadow-lg shadow-emerald-950/30">
+                <span className="px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider mb-3">
                   Khatib
                 </span>
-                <span className="text-lg lg:text-2xl font-bold text-white leading-snug">
+                <span className="text-base lg:text-xl font-extrabold text-white leading-snug">
                   {data.friday.khatib}
                 </span>
               </div>
 
-              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 flex flex-col items-center text-center">
-                <span className="px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 text-xs font-bold uppercase tracking-wider mb-3">
+              {/* Imam */}
+              <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/40 rounded-2xl p-5 flex flex-col items-center text-center shadow-lg shadow-amber-950/30">
+                <span className="px-3.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black uppercase tracking-wider mb-3">
                   Imam Shalat
                 </span>
-                <span className="text-lg lg:text-2xl font-bold text-white leading-snug">
+                <span className="text-base lg:text-xl font-extrabold text-white leading-snug">
                   {data.friday.imam}
                 </span>
               </div>
 
-              <div className="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 flex flex-col items-center text-center">
-                <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-wider mb-3">
+              {/* Muadzin */}
+              <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-cyan-500/40 rounded-2xl p-5 flex flex-col items-center text-center shadow-lg shadow-cyan-950/30">
+                <span className="px-3.5 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-black uppercase tracking-wider mb-3">
                   Muadzin
                 </span>
-                <span className="text-lg lg:text-2xl font-bold text-white leading-snug">
+                <span className="text-base lg:text-xl font-extrabold text-white leading-snug">
                   {data.friday.muadzin}
                 </span>
               </div>
