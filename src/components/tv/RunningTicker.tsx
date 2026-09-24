@@ -23,14 +23,16 @@ export const RunningTicker: React.FC<RunningTickerProps> = React.memo(({ items }
 
   return (
     <div className="running-ticker-container w-full bg-slate-950 border-t border-emerald-500/30 flex items-stretch h-14 shadow-2xl relative overflow-hidden z-20 select-none">
-      {/* Label Kiri Statis */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-500 text-slate-950 px-5 flex items-center gap-2 font-black text-xs lg:text-sm uppercase tracking-wider shrink-0 z-30 shadow-lg">
+      {/* Label Kiri Statis - Dijamin selalu tampil di semua perangkat & STB */}
+      <div className="ticker-badge bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 px-5 lg:px-6 flex items-center gap-2.5 font-black text-xs lg:text-sm uppercase tracking-wider shrink-0 z-30 shadow-2xl border-r border-emerald-400/40 select-none">
         <Megaphone className="w-4 h-4 text-slate-950 shrink-0" />
-        <span className="hidden sm:inline whitespace-nowrap">Warta Masjid</span>
+        <span className="whitespace-nowrap font-black tracking-wider text-slate-950 inline-block">
+          Warta Masjid
+        </span>
       </div>
 
       {/* Track Marquee Berjalan */}
-      <div className="flex-1 overflow-hidden relative flex items-center">
+      <div className="flex-1 min-w-0 overflow-hidden relative flex items-center">
         <div className="animate-marquee flex items-center shrink-0 w-max whitespace-nowrap py-1">
           {displayItems.map((item: RunningTextItem, idx: number) => (
             <div

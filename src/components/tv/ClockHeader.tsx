@@ -61,7 +61,7 @@ export const ClockHeader: React.FC = () => {
         </div>
 
         {/* Tanggal Masehi & Hijriah */}
-        <div className="text-right hidden sm:block border-r border-slate-800 pr-4">
+        <div className="text-right block border-r border-slate-800 pr-4">
           <div className="text-xs lg:text-sm font-bold text-slate-200">
             {formatMasehiDate(currentTime)}
           </div>

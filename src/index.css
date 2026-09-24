@@ -37,6 +37,15 @@
   overflow: hidden;
 }
 
+.ticker-badge {
+  position: relative;
+  z-index: 30;
+  flex-shrink: 0;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+}
+
 .animate-marquee {
   display: flex !important;
   flex-direction: row !important;
