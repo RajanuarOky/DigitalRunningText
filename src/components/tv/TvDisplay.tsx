@@ -36,8 +36,6 @@ export const TvDisplay: React.FC<TvDisplayProps> = ({ onNavigateToAdmin }) => {
       }}
       className="relative w-screen h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col justify-between select-none"
     >
-      {/* Background Decorative Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/20 via-slate-950 to-slate-950 pointer-events-none" />
 
       {/* Floating Control Toolbar (hover to reveal or discreet on TV) */}
       <div className="absolute top-3 right-3 z-40 opacity-20 hover:opacity-100 transition-opacity flex items-center gap-2">

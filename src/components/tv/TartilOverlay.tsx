@@ -42,7 +42,7 @@ export const TartilOverlay: React.FC = () => {
 
   return (
     <div className="absolute top-20 left-6 right-6 z-30 animate-in fade-in slide-in-from-top-4 duration-500">
-      <div className="bg-gradient-to-r from-emerald-950/95 via-slate-900/95 to-teal-950/95 border border-emerald-400/60 rounded-2xl p-4 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-xl">
+      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border border-emerald-400/60 rounded-2xl p-4 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Tartil Info & Spinning Disc */}
         <div className="flex items-center gap-4">
           <button

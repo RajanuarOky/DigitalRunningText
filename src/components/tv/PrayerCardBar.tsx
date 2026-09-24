@@ -48,7 +48,7 @@ export const PrayerCardBar: React.FC = () => {
                   ? 'bg-gradient-to-b from-indigo-900/90 via-blue-900/80 to-slate-900/95 border-indigo-400 shadow-xl shadow-indigo-500/30 z-10 ring-1 ring-indigo-400'
                   : isNext
                   ? 'bg-gradient-to-b from-emerald-900/90 via-emerald-800/80 to-slate-900/95 border-emerald-400 shadow-xl shadow-emerald-500/20 z-10 ring-1 ring-emerald-400'
-                  : 'bg-slate-900/70 backdrop-blur-md border-slate-800/80 hover:border-slate-700'
+                  : 'bg-slate-900 border-slate-800 hover:border-slate-700'
               }`}
             >
               {/* Highlight Badge */}
@@ -79,7 +79,7 @@ export const PrayerCardBar: React.FC = () => {
               {isNext && (
                 <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-emerald-500 to-teal-400 py-0.5 text-center shadow-sm">
                   <div className="text-[10px] lg:text-xs font-black uppercase tracking-wider text-slate-950 flex items-center justify-center gap-1">
-                    <Clock className="w-3 h-3 animate-spin" />
+                    <Clock className="w-3 h-3 text-slate-950" />
                     <span>-{formatSecondsToCountdown(prayers.timeRemainingSeconds)}</span>
                   </div>
                 </div>

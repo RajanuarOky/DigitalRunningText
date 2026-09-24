@@ -10,7 +10,7 @@ export const ClockHeader: React.FC = () => {
   const hijri = getHijriDate(currentTime, data.mosque.hijriOffset);
 
   return (
-    <header className="w-full bg-slate-900/80 backdrop-blur-md border-b border-emerald-500/20 px-6 py-3 flex items-center justify-between shadow-xl">
+    <header className="w-full bg-slate-900 border-b border-emerald-500/20 px-6 py-3 flex items-center justify-between shadow-xl">
       {/* Profil Masjid */}
       <div className="flex items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-950/50 flex items-center justify-center">
