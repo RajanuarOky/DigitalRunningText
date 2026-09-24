@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useMosque } from '../../context/MosqueContext';
 import { formatCurrencyIDR } from '../../utils/formatters';
-import type { BannerSlide } from '../../types';
+import type { SystemData, BannerSlide } from '../../types';
 import { Wallet, Users, BookOpen, Calendar, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
-export const MediaSlider: React.FC = () => {
-  const { data } = useMosque();
+interface MediaSliderProps {
+  data: SystemData;
+}
+
+export const MediaSlider: React.FC<MediaSliderProps> = React.memo(({ data }) => {
   const activeBanners = useMemo(
     () => data.banners.filter((b: BannerSlide) => b.active),
     [data.banners]
@@ -270,4 +272,4 @@ export const MediaSlider: React.FC = () => {
       </div>
     </div>
   );
-};
+});

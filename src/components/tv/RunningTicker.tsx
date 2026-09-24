@@ -1,13 +1,15 @@
 import React, { useMemo } from 'react';
-import { useMosque } from '../../context/MosqueContext';
 import type { RunningTextItem } from '../../types';
 import { Info, HeartHandshake, Sparkles, Megaphone } from 'lucide-react';
 
-export const RunningTicker: React.FC = () => {
-  const { data } = useMosque();
+interface RunningTickerProps {
+  items: RunningTextItem[];
+}
+
+export const RunningTicker: React.FC<RunningTickerProps> = React.memo(({ items }) => {
   const activeTexts = useMemo(
-    () => data.runningTexts.filter((t: RunningTextItem) => t.active),
-    [data.runningTexts]
+    () => items.filter((t: RunningTextItem) => t.active),
+    [items]
   );
 
   // Duplikasi teks agar efek infinite loop seamless tidak pernah kosong
@@ -20,7 +22,7 @@ export const RunningTicker: React.FC = () => {
   if (activeTexts.length === 0) return null;
 
   return (
-    <div className="w-full bg-slate-950 border-t border-emerald-500/30 flex items-stretch h-14 shadow-2xl relative overflow-hidden z-20 select-none">
+    <div className="running-ticker-container w-full bg-slate-950 border-t border-emerald-500/30 flex items-stretch h-14 shadow-2xl relative overflow-hidden z-20 select-none">
       {/* Label Kiri Statis */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-500 text-slate-950 px-5 flex items-center gap-2 font-black text-xs lg:text-sm uppercase tracking-wider shrink-0 z-30 shadow-lg">
         <Megaphone className="w-4 h-4 text-slate-950 shrink-0" />
@@ -60,4 +62,4 @@ export const RunningTicker: React.FC = () => {
       </div>
     </div>
   );
-};
+});

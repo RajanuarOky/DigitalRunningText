@@ -15,7 +15,7 @@ interface TvDisplayProps {
 }
 
 export const TvDisplay: React.FC<TvDisplayProps> = ({ onNavigateToAdmin }) => {
-  const { displayState, isAudioUnlocked, unlockAudio } = useMosque();
+  const { data, displayState, isAudioUnlocked, unlockAudio } = useMosque();
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
@@ -74,7 +74,7 @@ export const TvDisplay: React.FC<TvDisplayProps> = ({ onNavigateToAdmin }) => {
 
       {/* 3. Slider Media / Konten Tengah */}
       <main className="flex-1 flex flex-col justify-center min-h-0 relative z-10">
-        <MediaSlider />
+        <MediaSlider data={data} />
       </main>
 
       {/* 4. Bar Jadwal Sholat 6 Waktu */}
@@ -83,7 +83,7 @@ export const TvDisplay: React.FC<TvDisplayProps> = ({ onNavigateToAdmin }) => {
       </div>
 
       {/* 5. Running Text / Warta Masjid */}
-      <RunningTicker />
+      <RunningTicker items={data.runningTexts} />
 
       {/* 6. Fullscreen Overlays for specific States */}
       {displayState === 'ADZAN' && <AdzanScreen />}
