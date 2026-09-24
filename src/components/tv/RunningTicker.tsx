@@ -24,7 +24,14 @@ export const RunningTicker: React.FC<RunningTickerProps> = React.memo(({ items }
   return (
     <div className="running-ticker-container w-full bg-slate-950 border-t border-emerald-500/30 flex items-stretch h-14 shadow-2xl relative overflow-hidden z-20 select-none">
       {/* Label Kiri Statis - Dijamin selalu tampil di semua perangkat & STB */}
-      <div className="ticker-badge bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 px-5 lg:px-6 flex items-center gap-2.5 font-black text-xs lg:text-sm uppercase tracking-wider shrink-0 z-30 shadow-2xl border-r border-emerald-400/40 select-none">
+      <div
+        className="ticker-badge h-full px-5 lg:px-6 flex items-center gap-2.5 font-black text-xs lg:text-sm uppercase tracking-wider shrink-0 z-30 shadow-2xl border-r border-emerald-400/40 select-none"
+        style={{
+          backgroundColor: '#10b981',
+          backgroundImage: 'linear-gradient(to right, #059669, #14b8a6)',
+          color: '#020617',
+        }}
+      >
         <Megaphone className="w-4 h-4 text-slate-950 shrink-0" />
         <span className="whitespace-nowrap font-black tracking-wider text-slate-950 inline-block">
           Warta Masjid

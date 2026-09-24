@@ -44,6 +44,10 @@
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   will-change: transform;
+  background-color: #10b981 !important;
+  background-image: -webkit-linear-gradient(left, #059669, #14b8a6) !important;
+  background-image: linear-gradient(to right, #059669, #14b8a6) !important;
+  color: #020617 !important;
 }
 
 .animate-marquee {
