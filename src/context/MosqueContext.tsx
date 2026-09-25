@@ -40,7 +40,13 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activePrayerTarget, setActivePrayerTarget] = useState<PrayerName | null>(null);
   const [stateCountdownSeconds, setStateCountdownSeconds] = useState<number>(0);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState<boolean>(false);
-  const isSimulatingRef = useRef<boolean>(false);
+  const simulationRef = useRef<{
+    phase: 'ADZAN' | 'IQOMAH' | 'PRAYER' | 'TARTIL';
+    prayerName: PrayerName;
+    endTimeMs: number;
+  } | null>(null);
+  const lastStateRef = useRef<AppDisplayState>('NORMAL');
+  const lastAdzanChimeTriggeredRef = useRef<string | null>(null);
 
   // Keep fresh references for callbacks and timers without causing re-subscriptions
   const dataRef = useRef<SystemData>(data);
@@ -71,7 +77,11 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Handler aksi lokal saat menerima event simulasi (baik lokal maupun via BroadcastChannel)
   const applyLocalSimulateAdzan = useCallback((prayerName: PrayerName = 'maghrib', duration = 45) => {
-    isSimulatingRef.current = true;
+    simulationRef.current = {
+      phase: 'ADZAN',
+      prayerName,
+      endTimeMs: Date.now() + duration * 1000,
+    };
     audioService.stopTartil();
     audioService.playAdzanChime();
     setDisplayState('ADZAN');
@@ -80,7 +90,11 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const applyLocalSimulateTartil = useCallback((prayerName: PrayerName = 'maghrib', duration = 60) => {
-    isSimulatingRef.current = true;
+    simulationRef.current = {
+      phase: 'TARTIL',
+      prayerName,
+      endTimeMs: Date.now() + duration * 1000,
+    };
     setDisplayState('TARTIL');
     setActivePrayerTarget(prayerName);
     setStateCountdownSeconds(duration);
@@ -91,7 +105,11 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const applyLocalSimulateIqomah = useCallback((prayerName: PrayerName = 'maghrib', durationSeconds = 120) => {
-    isSimulatingRef.current = true;
+    simulationRef.current = {
+      phase: 'IQOMAH',
+      prayerName,
+      endTimeMs: Date.now() + durationSeconds * 1000,
+    };
     audioService.stopTartil();
     setDisplayState('IQOMAH');
     setActivePrayerTarget(prayerName);
@@ -99,14 +117,18 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const applyLocalSimulatePrayerMode = useCallback((durationSeconds = 60) => {
-    isSimulatingRef.current = true;
+    simulationRef.current = {
+      phase: 'PRAYER',
+      prayerName: 'maghrib',
+      endTimeMs: Date.now() + durationSeconds * 1000,
+    };
     audioService.stopTartil();
     setDisplayState('PRAYER');
     setStateCountdownSeconds(durationSeconds);
   }, []);
 
   const applyLocalReset = useCallback(() => {
-    isSimulatingRef.current = false;
+    simulationRef.current = null;
     audioService.stopTartil();
     setDisplayState('NORMAL');
     setActivePrayerTarget(null);
@@ -210,125 +232,174 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
-  // 1. Rock-solid independent 1-second clock tick (never cancelled by renders or state updates)
+  // 1. Rock-solid 1-second clock tick + Instant Wakeup on Tab Visibility / Focus
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
-    return () => clearInterval(timer);
+    const onWakeup = () => {
+      setCurrentTime(new Date());
+    };
+
+    document.addEventListener('visibilitychange', onWakeup);
+    window.addEventListener('focus', onWakeup);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onWakeup);
+      window.removeEventListener('focus', onWakeup);
+    };
   }, []);
 
-  // 2. State transition & countdown decrements (fires synchronously on each second tick)
+  // 2. State transition & countdown calculation (strictly timestamp-driven & immune to throttling)
   useEffect(() => {
-    const currentDisplayState = displayStateRef.current;
-    const currentActivePrayer = activePrayerTargetRef.current;
     const currentData = dataRef.current;
+    const nowMs = currentTime.getTime();
 
-    // A. Mode Simulasi: countdown berkurang 1 detik tiap detiknya
-    if (isSimulatingRef.current) {
-      setStateCountdownSeconds((prev: number) => {
-        if (prev <= 1) {
-          if (currentDisplayState === 'ADZAN') {
-            setDisplayState('IQOMAH');
-            return 60; // Lanjut ke demo iqomah 60 detik
-          } else if (currentDisplayState === 'IQOMAH') {
-            setDisplayState('PRAYER');
-            return 45; // Lanjut ke demo sholat 45 detik
-          } else {
-            setDisplayState('NORMAL');
-            isSimulatingRef.current = false;
-            audioService.stopTartil();
-            return 0;
-          }
-        }
+    // A. Mode Simulasi Manual (User testing via Admin / Remote)
+    if (simulationRef.current) {
+      const sim = simulationRef.current;
+      const remainingSec = Math.max(0, Math.ceil((sim.endTimeMs - nowMs) / 1000));
 
-        if (currentDisplayState === 'IQOMAH' && prev <= 10 && prev > 0) {
-          audioService.playBeep(1050, 0.1, 'sine', 0.4);
-        }
-        return prev - 1;
-      });
-      return;
-    }
-
-    // B. Mode Nyata (Real-time prayer scheduling)
-    // 1. Pengecekan Waktu Adzan Masuk Real-Time
-    if (prayers.currentAdzanPrayer && currentDisplayState !== 'ADZAN' && currentDisplayState !== 'IQOMAH' && currentDisplayState !== 'PRAYER') {
-      audioService.stopTartil();
-      audioService.playAdzanChime();
-      setDisplayState('ADZAN');
-      setActivePrayerTarget(prayers.currentAdzanPrayer.name);
-      setStateCountdownSeconds(90); // Tampilan adzan 90 detik
-      return;
-    }
-
-    // 2. Transisi Adzan -> Iqomah
-    if (currentDisplayState === 'ADZAN') {
-      setStateCountdownSeconds((prev: number) => {
-        if (prev <= 1) {
-          const iqomahMinutes = (currentActivePrayer && currentData.iqomah.durations[currentActivePrayer as keyof typeof currentData.iqomah.durations]) || 8;
+      if (remainingSec <= 0) {
+        if (sim.phase === 'ADZAN') {
+          sim.phase = 'IQOMAH';
+          sim.endTimeMs = nowMs + 60 * 1000;
           setDisplayState('IQOMAH');
-          return iqomahMinutes * 60;
-        }
-        return prev - 1;
-      });
-      return;
-    }
-
-    // 3. Transisi Iqomah -> Sholat
-    if (currentDisplayState === 'IQOMAH') {
-      setStateCountdownSeconds((prev: number) => {
-        if (prev <= 1) {
+          setStateCountdownSeconds(60);
+          return;
+        } else if (sim.phase === 'IQOMAH') {
+          sim.phase = 'PRAYER';
+          sim.endTimeMs = nowMs + 45 * 1000;
           setDisplayState('PRAYER');
-          return (currentData.prayerMode.durationMinutes || 12) * 60;
-        }
-        if (prev <= currentData.iqomah.beepLastSeconds) {
-          audioService.playBeep(1150, 0.12, 'square', 0.4);
-        }
-        return prev - 1;
-      });
-      return;
-    }
-
-    // 4. Transisi Sholat -> Normal
-    if (currentDisplayState === 'PRAYER') {
-      setStateCountdownSeconds((prev: number) => {
-        if (prev <= 1) {
+          setStateCountdownSeconds(45);
+          return;
+        } else {
+          simulationRef.current = null;
+          audioService.stopTartil();
           setDisplayState('NORMAL');
           setActivePrayerTarget(null);
-          return 0;
+          setStateCountdownSeconds(0);
+          return;
         }
-        return prev - 1;
-      });
+      }
+
+      setDisplayState(sim.phase);
+      setActivePrayerTarget(sim.prayerName);
+      setStateCountdownSeconds(remainingSec);
+
+      if (sim.phase === 'IQOMAH' && remainingSec <= 10 && remainingSec > 0) {
+        audioService.playBeep(1050, 0.1, 'sine', 0.4);
+      }
       return;
     }
 
-    // 5. Pengecekan Masuk Waktu Tartil Otomatis (Pre-Adzan)
-    const nextPrayerName = prayers.nextPrayer.name;
-    const secondsLeft = prayers.timeRemainingSeconds;
+    // B. Mode Nyata (Real-time prayer scheduling berbasis timestamp dinding)
+    const fardhuPrayers: PrayerName[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+    let matchedPrayerCycle: {
+      prayerName: PrayerName;
+      phase: 'ADZAN' | 'IQOMAH' | 'PRAYER';
+      remainingSec: number;
+    } | null = null;
 
-    if (currentData.tartil.masterEnabled && currentDisplayState === 'NORMAL') {
+    for (const p of prayers.prayerSchedule) {
+      if (!fardhuPrayers.includes(p.name)) continue;
+
+      const pTimeMs = p.time.getTime();
+      const diffSec = Math.floor((nowMs - pTimeMs) / 1000);
+
+      const adzanDuration = 90; // 90 detik durasi adzan
+      const iqomahMin = (currentData.iqomah.durations[p.name as keyof typeof currentData.iqomah.durations]) || 8;
+      const iqomahDuration = iqomahMin * 60;
+      const prayerDuration = (currentData.prayerMode.durationMinutes || 12) * 60;
+      const totalCycleSec = adzanDuration + iqomahDuration + prayerDuration;
+
+      // Cek apakah waktu saat ini berada dalam rentang siklus sholat fardhu ini
+      if (diffSec >= 0 && diffSec < totalCycleSec) {
+        if (diffSec < adzanDuration) {
+          matchedPrayerCycle = {
+            prayerName: p.name,
+            phase: 'ADZAN',
+            remainingSec: adzanDuration - diffSec,
+          };
+        } else if (diffSec < adzanDuration + iqomahDuration) {
+          matchedPrayerCycle = {
+            prayerName: p.name,
+            phase: 'IQOMAH',
+            remainingSec: (adzanDuration + iqomahDuration) - diffSec,
+          };
+        } else {
+          matchedPrayerCycle = {
+            prayerName: p.name,
+            phase: 'PRAYER',
+            remainingSec: totalCycleSec - diffSec,
+          };
+        }
+        break;
+      }
+    }
+
+    // 1. Jika sedang berada dalam fase Adzan, Iqomah, atau Sholat
+    if (matchedPrayerCycle) {
+      const { prayerName, phase, remainingSec } = matchedPrayerCycle;
+
+      if (phase === 'ADZAN') {
+        const adzanEventKey = `${prayerName}-${currentTime.toDateString()}`;
+        if (lastStateRef.current !== 'ADZAN' || lastAdzanChimeTriggeredRef.current !== adzanEventKey) {
+          audioService.stopTartil();
+          audioService.playAdzanChime();
+          lastAdzanChimeTriggeredRef.current = adzanEventKey;
+        }
+      } else if (phase === 'IQOMAH') {
+        if (remainingSec <= currentData.iqomah.beepLastSeconds && remainingSec > 0) {
+          audioService.playBeep(1150, 0.12, 'square', 0.4);
+        }
+      } else if (phase === 'PRAYER') {
+        if (lastStateRef.current !== 'PRAYER') {
+          audioService.stopTartil();
+        }
+      }
+
+      lastStateRef.current = phase;
+      setDisplayState(phase);
+      setActivePrayerTarget(prayerName);
+      setStateCountdownSeconds(remainingSec);
+      return;
+    }
+
+    // 2. Cek Masa Murottal Tartil Pra-Adzan
+    const nextPrayerName = prayers.nextPrayer.name;
+    const secondsUntilNext = prayers.timeRemainingSeconds;
+
+    if (currentData.tartil.masterEnabled) {
       const prayerKey = nextPrayerName as keyof typeof currentData.tartil.prayers;
       const tartilConfig = currentData.tartil.prayers[prayerKey];
 
       if (tartilConfig && tartilConfig.enabled) {
-        const tartilWindowSeconds = tartilConfig.minutesBefore * 60;
-        if (secondsLeft <= tartilWindowSeconds && secondsLeft > 0) {
+        const tartilWindowSec = tartilConfig.minutesBefore * 60;
+        if (secondsUntilNext <= tartilWindowSec && secondsUntilNext > 0) {
+          if (lastStateRef.current !== 'TARTIL' && tartilConfig.audioUrl) {
+            const elapsed = Math.max(0, tartilWindowSec - secondsUntilNext);
+            audioService.playTartil(tartilConfig.audioUrl, currentData.tartil.volume, elapsed);
+          }
+          lastStateRef.current = 'TARTIL';
           setDisplayState('TARTIL');
           setActivePrayerTarget(nextPrayerName);
-          setStateCountdownSeconds(secondsLeft);
-          if (tartilConfig.audioUrl) {
-            const elapsedSeconds = Math.max(0, tartilWindowSeconds - secondsLeft);
-            audioService.playTartil(tartilConfig.audioUrl, currentData.tartil.volume, elapsedSeconds);
-          }
+          setStateCountdownSeconds(secondsUntilNext);
+          return;
         }
       }
     }
 
-    // 6. Jika sedang Tartil, update sisa detik menuju adzan
-    if (currentDisplayState === 'TARTIL') {
-      setStateCountdownSeconds(secondsLeft);
+    // 3. Mode Normal (Tidak ada siklus sholat aktif maupun tartil)
+    if (lastStateRef.current === 'TARTIL') {
+      audioService.stopTartil();
     }
+    lastStateRef.current = 'NORMAL';
+    setDisplayState('NORMAL');
+    setActivePrayerTarget(null);
+    setStateCountdownSeconds(0);
   }, [currentTime, prayers]);
 
   // Simulator Triggers yang Mem-broadcast ke Seluruh Tab/Window (TV Display) & Cloud
