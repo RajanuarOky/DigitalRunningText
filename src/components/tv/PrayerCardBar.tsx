@@ -39,47 +39,111 @@ export const PrayerCardBar: React.FC = () => {
           return (
             <div
               key={key}
-              className={`relative overflow-hidden rounded-2xl transition-all duration-300 flex flex-col items-center justify-between py-3 px-2 min-h-[110px] border ${
-                isAdzanNow
-                  ? 'bg-gradient-to-b from-amber-900 via-amber-950 to-slate-900 border-2 border-amber-400 shadow-2xl shadow-amber-500/30 ring-2 ring-amber-400/50 scale-[1.02] z-20 animate-subtle-pulse'
-                  : isTartilNow
-                  ? 'bg-gradient-to-b from-teal-900/90 via-emerald-950 to-slate-900 border-2 border-teal-400 shadow-xl shadow-teal-500/20 ring-1 ring-teal-400/40'
-                  : isIqomahNow
-                  ? 'bg-gradient-to-b from-indigo-900/90 via-blue-950 to-slate-900 border-2 border-indigo-400 shadow-xl shadow-indigo-500/20 ring-1 ring-indigo-400/40'
-                  : isNext
-                  ? 'bg-gradient-to-b from-emerald-950 via-emerald-900/80 to-slate-900 border-2 border-emerald-400 shadow-xl shadow-emerald-900/50 ring-2 ring-emerald-500/30'
-                  : 'bg-slate-900/90 border border-slate-800/80 shadow-md hover:border-slate-700'
+              className={`relative overflow-hidden rounded-2xl transition-all duration-300 flex flex-col items-center justify-between py-3 px-2 min-h-[112px] ${
+                isAdzanNow ? 'scale-[1.02] z-20 animate-subtle-pulse' : isNext ? 'z-10' : ''
               }`}
+              style={
+                isAdzanNow
+                  ? {
+                      backgroundColor: '#451a03',
+                      backgroundImage: 'linear-gradient(180deg, #78350f, #451a03 50%, #0f172a 100%)',
+                      borderColor: '#f59e0b',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 20px rgba(245, 158, 11, 0.4)',
+                    }
+                  : isTartilNow
+                  ? {
+                      backgroundColor: '#042f2e',
+                      backgroundImage: 'linear-gradient(180deg, #134e4a, #042f2e 50%, #0f172a 100%)',
+                      borderColor: '#14b8a6',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 20px rgba(20, 184, 166, 0.3)',
+                    }
+                  : isIqomahNow
+                  ? {
+                      backgroundColor: '#1e1b4b',
+                      backgroundImage: 'linear-gradient(180deg, #312e81, #1e1b4b 50%, #0f172a 100%)',
+                      borderColor: '#818cf8',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 20px rgba(129, 140, 248, 0.3)',
+                    }
+                  : isNext
+                  ? {
+                      backgroundColor: '#022c22',
+                      backgroundImage: 'linear-gradient(180deg, #064e3b, #022c22 60%, #0f172a 100%)',
+                      borderColor: '#10b981',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      boxShadow: '0 0 20px rgba(16, 185, 129, 0.35)',
+                    }
+                  : {
+                      backgroundColor: '#0f172a',
+                      borderColor: '#334155',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                    }
+              }
             >
               {/* Highlight Badge */}
               {isAdzanNow && (
-                <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-amber-400 to-yellow-300 py-0.5 text-center shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-950">
+                <div
+                  className="absolute top-0 inset-x-0 py-0.5 text-center shadow-md select-none"
+                  style={{
+                    backgroundColor: '#f59e0b',
+                    backgroundImage: 'linear-gradient(90deg, #d97706, #f59e0b)',
+                    color: '#020617',
+                  }}
+                >
+                  <div className="text-[10px] font-black uppercase tracking-wider animate-pulse" style={{ color: '#020617' }}>
                     ✦ WAKTU ADZAN ✦
                   </div>
                 </div>
               )}
 
               {isTartilNow && (
-                <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-teal-400 to-emerald-300 py-0.5 text-center shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-950">
+                <div
+                  className="absolute top-0 inset-x-0 py-0.5 text-center shadow-md select-none"
+                  style={{
+                    backgroundColor: '#14b8a6',
+                    backgroundImage: 'linear-gradient(90deg, #0d9488, #14b8a6)',
+                    color: '#020617',
+                  }}
+                >
+                  <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#020617' }}>
                     Murottal Tartil
                   </div>
                 </div>
               )}
 
               {isIqomahNow && (
-                <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-indigo-400 to-blue-300 py-0.5 text-center shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-950">
+                <div
+                  className="absolute top-0 inset-x-0 py-0.5 text-center shadow-md select-none"
+                  style={{
+                    backgroundColor: '#6366f1',
+                    backgroundImage: 'linear-gradient(90deg, #4f46e5, #6366f1)',
+                    color: '#ffffff',
+                  }}
+                >
+                  <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#ffffff' }}>
                     Jeda Iqomah
                   </div>
                 </div>
               )}
 
               {isNext && (
-                <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-emerald-500 to-teal-400 py-0.5 text-center shadow-sm">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-950 flex items-center justify-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-950" />
+                <div
+                  className="absolute top-0 inset-x-0 py-0.5 text-center shadow-md select-none"
+                  style={{
+                    backgroundColor: '#10b981',
+                    backgroundImage: 'linear-gradient(90deg, #059669, #10b981)',
+                    color: '#020617',
+                  }}
+                >
+                  <div className="text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1" style={{ color: '#020617' }}>
+                    <Clock className="w-3 h-3 text-slate-950 shrink-0" />
                     <span>-{formatSecondsToCountdown(prayers.timeRemainingSeconds)}</span>
                   </div>
                 </div>
@@ -91,7 +155,7 @@ export const PrayerCardBar: React.FC = () => {
 
               <span
                 className={`text-xs lg:text-sm font-black uppercase tracking-wider mt-1 ${
-                  isAdzanNow ? 'text-amber-200' : isNext ? 'text-emerald-200' : 'text-slate-400'
+                  isAdzanNow ? 'text-amber-200' : isNext ? 'text-emerald-200' : 'text-slate-300'
                 }`}
               >
                 {label}
@@ -110,7 +174,14 @@ export const PrayerCardBar: React.FC = () => {
               </span>
 
               {isNext && (
-                <div className="mt-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/90 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
+                <div
+                  className="mt-1 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider"
+                  style={{
+                    backgroundColor: '#064e3b',
+                    color: '#6ee7b7',
+                    border: '1px solid #10b981',
+                  }}
+                >
                   Berikutnya
                 </div>
               )}

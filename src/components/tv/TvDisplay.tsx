@@ -71,12 +71,12 @@ export const TvDisplay: React.FC<TvDisplayProps> = ({ onNavigateToAdmin }) => {
       {displayState === 'TARTIL' && <TartilOverlay />}
 
       {/* 3. Slider Media / Konten Tengah */}
-      <main className="flex-1 flex flex-col justify-center min-h-0 relative z-10">
+      <main className="flex-1 flex flex-col justify-center min-h-0 relative z-10 mb-2">
         <MediaSlider data={data} />
       </main>
 
-      {/* 4. Bar Jadwal Sholat 6 Waktu */}
-      <div className="relative z-10">
+      {/* 4. Bar Jadwal Sholat 6 Waktu (Dock Bar) */}
+      <div className="w-full bg-slate-950 border-t border-slate-800/90 relative z-10">
         <PrayerCardBar />
       </div>
 
