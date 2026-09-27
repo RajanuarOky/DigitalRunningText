@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMosque } from '../../context/MosqueContext';
 import { MosqueSettings } from './MosqueSettings';
+import { AdzanAudioSettings } from './AdzanAudioSettings';
 import { TartilSettings } from './TartilSettings';
 import { RunningTextManager } from './RunningTextManager';
 import { MediaBannerManager } from './MediaBannerManager';
@@ -16,13 +17,14 @@ import {
   RotateCcw,
   Volume2,
   Cloud,
+  Radio,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
   onNavigateToTv: () => void;
 }
 
-type TabType = 'mosque' | 'tartil' | 'runningText' | 'media' | 'simulator' | 'cloud';
+type TabType = 'mosque' | 'adzan' | 'tartil' | 'runningText' | 'media' | 'simulator' | 'cloud';
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTv }) => {
   const { data, resetData, unlockAudio, isAudioUnlocked } = useMosque();
@@ -31,6 +33,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTv }
   const tabs: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: 'simulator', label: 'Remote & Simulasi', icon: <PlayCircle className="w-4 h-4" /> },
     { key: 'cloud', label: 'Cloud Sync (HP ↔ TV)', icon: <Cloud className="w-4 h-4 text-cyan-400" /> },
+    { key: 'adzan', label: 'Audio Adzan', icon: <Radio className="w-4 h-4 text-emerald-400" /> },
     { key: 'tartil', label: 'Tartil & Audio', icon: <Disc className="w-4 h-4" /> },
     { key: 'runningText', label: 'Running Text', icon: <Megaphone className="w-4 h-4" /> },
     { key: 'media', label: 'Banner & Kas', icon: <ImageIcon className="w-4 h-4" /> },
@@ -115,6 +118,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTv }
         <div className="flex-1">
           {activeTab === 'simulator' && <RemoteSimulator onOpenTv={onNavigateToTv} />}
           {activeTab === 'cloud' && <CloudSyncSettings />}
+          {activeTab === 'adzan' && <AdzanAudioSettings />}
           {activeTab === 'tartil' && <TartilSettings />}
           {activeTab === 'runningText' && <RunningTextManager />}
           {activeTab === 'media' && <MediaBannerManager />}

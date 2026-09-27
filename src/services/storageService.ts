@@ -58,6 +58,43 @@ export const DEFAULT_DATA: SystemData = {
       },
     },
   },
+  adzan: {
+    masterEnabled: true,
+    volume: 0.9,
+    playChimeBefore: true,
+    prayers: {
+      fajr: {
+        enabled: true,
+        audioTitle: 'Adzan Subuh - Misyari Rasyid (Madinah)',
+        audioUrl: 'https://raw.githubusercontent.com/AalianKhan/adhans/master/adhan_fajr.mp3',
+        durationSeconds: 195,
+      },
+      dhuhr: {
+        enabled: false,
+        audioTitle: 'Adzan Reguler - Makkah Al-Mukarramah',
+        audioUrl: 'https://raw.githubusercontent.com/AalianKhan/adhans/master/adhan.mp3',
+        durationSeconds: 180,
+      },
+      asr: {
+        enabled: false,
+        audioTitle: 'Adzan Reguler - Makkah Al-Mukarramah',
+        audioUrl: 'https://raw.githubusercontent.com/AalianKhan/adhans/master/adhan.mp3',
+        durationSeconds: 180,
+      },
+      maghrib: {
+        enabled: false,
+        audioTitle: 'Adzan Reguler - Makkah Al-Mukarramah',
+        audioUrl: 'https://raw.githubusercontent.com/AalianKhan/adhans/master/adhan.mp3',
+        durationSeconds: 180,
+      },
+      isha: {
+        enabled: false,
+        audioTitle: 'Adzan Reguler - Makkah Al-Mukarramah',
+        audioUrl: 'https://raw.githubusercontent.com/AalianKhan/adhans/master/adhan.mp3',
+        durationSeconds: 180,
+      },
+    },
+  },
   iqomah: {
     durations: {
       fajr: 10,
@@ -166,6 +203,14 @@ export const storageService = {
             prayers: {
               ...DEFAULT_DATA.tartil.prayers,
               ...(parsed.tartil?.prayers || {}),
+            },
+          },
+          adzan: {
+            ...DEFAULT_DATA.adzan,
+            ...(parsed.adzan || {}),
+            prayers: {
+              ...DEFAULT_DATA.adzan.prayers,
+              ...(parsed.adzan?.prayers || {}),
             },
           },
           iqomah: { ...DEFAULT_DATA.iqomah, ...(parsed.iqomah || {}) },

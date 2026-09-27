@@ -40,6 +40,26 @@ export interface TartilConfig {
   };
 }
 
+export interface AdzanPrayerConfig {
+  enabled: boolean;
+  audioTitle: string;
+  audioUrl: string;
+  durationSeconds: number;
+}
+
+export interface AdzanConfig {
+  masterEnabled: boolean;
+  volume: number;
+  playChimeBefore: boolean;
+  prayers: {
+    fajr: AdzanPrayerConfig;
+    dhuhr: AdzanPrayerConfig;
+    asr: AdzanPrayerConfig;
+    maghrib: AdzanPrayerConfig;
+    isha: AdzanPrayerConfig;
+  };
+}
+
 export interface IqomahConfig {
   durations: {
     fajr: number; // menit
@@ -121,6 +141,7 @@ export interface CalculatedPrayers {
 export interface SystemData {
   mosque: MosqueConfig;
   tartil: TartilConfig;
+  adzan: AdzanConfig;
   iqomah: IqomahConfig;
   prayerMode: PrayerDisplayModeConfig;
   runningTexts: RunningTextItem[];

@@ -178,7 +178,7 @@ export const RemoteSimulator: React.FC<RemoteSimulatorProps> = ({ onOpenTv }) =>
                 <span>2. Layar Waktu Adzan Tiba</span>
               </div>
               <p className="text-xs text-slate-400 mb-4">
-                Menghentikan murottal, membunyikan chime nada adzan, dan menampilkan pop-up waktu adzan.
+                Menghentikan murottal, membunyikan chime (serta rekaman audio adzan jika diaktifkan), dan menampilkan layar adzan.
               </p>
             </div>
             <button

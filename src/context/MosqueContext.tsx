@@ -77,13 +77,32 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Handler aksi lokal saat menerima event simulasi (baik lokal maupun via BroadcastChannel)
   const applyLocalSimulateAdzan = useCallback((prayerName: PrayerName = 'maghrib', duration = 45) => {
+    const currentData = dataRef.current;
+    const prayerAdzanCfg = currentData.adzan?.masterEnabled
+      ? currentData.adzan.prayers[prayerName as keyof typeof currentData.adzan.prayers]
+      : null;
+    const isAudioAdzanActive = prayerAdzanCfg?.enabled && !!prayerAdzanCfg.audioUrl;
+
     simulationRef.current = {
       phase: 'ADZAN',
       prayerName,
       endTimeMs: Date.now() + duration * 1000,
     };
     audioService.stopTartil();
-    audioService.playAdzanChime();
+    audioService.stopAdzan();
+
+    if (currentData.adzan?.playChimeBefore !== false) {
+      audioService.playAdzanChime();
+    }
+
+    if (isAudioAdzanActive && prayerAdzanCfg.audioUrl) {
+      setTimeout(() => {
+        if (simulationRef.current?.phase === 'ADZAN') {
+          audioService.playAdzan(prayerAdzanCfg.audioUrl, currentData.adzan?.volume ?? 0.9, 0);
+        }
+      }, currentData.adzan?.playChimeBefore !== false ? 1200 : 50);
+    }
+
     setDisplayState('ADZAN');
     setActivePrayerTarget(prayerName);
     setStateCountdownSeconds(duration);
@@ -95,6 +114,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prayerName,
       endTimeMs: Date.now() + duration * 1000,
     };
+    audioService.stopAdzan();
     setDisplayState('TARTIL');
     setActivePrayerTarget(prayerName);
     setStateCountdownSeconds(duration);
@@ -111,6 +131,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       endTimeMs: Date.now() + durationSeconds * 1000,
     };
     audioService.stopTartil();
+    audioService.stopAdzan();
     setDisplayState('IQOMAH');
     setActivePrayerTarget(prayerName);
     setStateCountdownSeconds(durationSeconds);
@@ -123,6 +144,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       endTimeMs: Date.now() + durationSeconds * 1000,
     };
     audioService.stopTartil();
+    audioService.stopAdzan();
     setDisplayState('PRAYER');
     setStateCountdownSeconds(durationSeconds);
   }, []);
@@ -130,6 +152,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const applyLocalReset = useCallback(() => {
     simulationRef.current = null;
     audioService.stopTartil();
+    audioService.stopAdzan();
     setDisplayState('NORMAL');
     setActivePrayerTarget(null);
     setStateCountdownSeconds(0);
@@ -264,6 +287,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       if (remainingSec <= 0) {
         if (sim.phase === 'ADZAN') {
+          audioService.stopAdzan();
           sim.phase = 'IQOMAH';
           sim.endTimeMs = nowMs + 60 * 1000;
           setDisplayState('IQOMAH');
@@ -278,6 +302,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } else {
           simulationRef.current = null;
           audioService.stopTartil();
+          audioService.stopAdzan();
           setDisplayState('NORMAL');
           setActivePrayerTarget(null);
           setStateCountdownSeconds(0);
@@ -309,7 +334,12 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const pTimeMs = p.time.getTime();
       const diffSec = Math.floor((nowMs - pTimeMs) / 1000);
 
-      const adzanDuration = 90; // 90 detik durasi adzan
+      const prayerAdzanCfg = currentData.adzan?.masterEnabled
+        ? currentData.adzan.prayers[p.name as keyof typeof currentData.adzan.prayers]
+        : null;
+      const isAudioAdzanActive = prayerAdzanCfg?.enabled && !!prayerAdzanCfg.audioUrl;
+      const adzanDuration = isAudioAdzanActive ? (prayerAdzanCfg.durationSeconds || 195) : 90;
+
       const iqomahMin = (currentData.iqomah.durations[p.name as keyof typeof currentData.iqomah.durations]) || 8;
       const iqomahDuration = iqomahMin * 60;
       const prayerDuration = (currentData.prayerMode.durationMinutes || 12) * 60;
@@ -348,16 +378,41 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const adzanEventKey = `${prayerName}-${currentTime.toDateString()}`;
         if (lastStateRef.current !== 'ADZAN' || lastAdzanChimeTriggeredRef.current !== adzanEventKey) {
           audioService.stopTartil();
-          audioService.playAdzanChime();
+          audioService.stopAdzan();
+
+          const prayerAdzanCfg = currentData.adzan?.masterEnabled
+            ? currentData.adzan.prayers[prayerName as keyof typeof currentData.adzan.prayers]
+            : null;
+          const isAudioAdzanActive = prayerAdzanCfg?.enabled && !!prayerAdzanCfg.audioUrl;
+
+          if (currentData.adzan?.playChimeBefore !== false) {
+            audioService.playAdzanChime();
+          }
           lastAdzanChimeTriggeredRef.current = adzanEventKey;
+
+          if (isAudioAdzanActive && prayerAdzanCfg.audioUrl) {
+            const pTimeMs = prayers.prayerSchedule.find(p => p.name === prayerName)?.time.getTime() || nowMs;
+            const elapsed = Math.max(0, Math.floor((nowMs - pTimeMs) / 1000));
+            const chimeDelay = currentData.adzan?.playChimeBefore !== false ? 1200 : 50;
+
+            setTimeout(() => {
+              if (displayStateRef.current === 'ADZAN') {
+                audioService.playAdzan(prayerAdzanCfg.audioUrl, currentData.adzan?.volume ?? 0.9, elapsed);
+              }
+            }, chimeDelay);
+          }
         }
       } else if (phase === 'IQOMAH') {
+        if (lastStateRef.current === 'ADZAN') {
+          audioService.stopAdzan();
+        }
         if (remainingSec <= currentData.iqomah.beepLastSeconds && remainingSec > 0) {
           audioService.playBeep(1150, 0.12, 'square', 0.4);
         }
       } else if (phase === 'PRAYER') {
         if (lastStateRef.current !== 'PRAYER') {
           audioService.stopTartil();
+          audioService.stopAdzan();
         }
       }
 
@@ -395,6 +450,9 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // 3. Mode Normal (Tidak ada siklus sholat aktif maupun tartil)
     if (lastStateRef.current === 'TARTIL') {
       audioService.stopTartil();
+    }
+    if (lastStateRef.current === 'ADZAN') {
+      audioService.stopAdzan();
     }
     lastStateRef.current = 'NORMAL';
     setDisplayState('NORMAL');

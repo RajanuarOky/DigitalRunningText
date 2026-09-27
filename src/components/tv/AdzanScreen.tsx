@@ -5,8 +5,18 @@ import { formatSecondsToCountdown } from '../../utils/formatters';
 import { Volume2, Sparkles, Moon } from 'lucide-react';
 
 export const AdzanScreen: React.FC = () => {
-  const { activePrayerTarget, stateCountdownSeconds } = useMosque();
+  const { data, activePrayerTarget, stateCountdownSeconds } = useMosque();
   const prayerLabel = activePrayerTarget ? PRAYER_LABELS[activePrayerTarget] : 'Sholat';
+
+  const prayerConfig = (activePrayerTarget && activePrayerTarget !== 'sunrise')
+    ? data.adzan?.prayers[activePrayerTarget as keyof typeof data.adzan.prayers]
+    : undefined;
+
+  const isAudioEnabled = Boolean(
+    data.adzan?.masterEnabled &&
+    prayerConfig?.enabled
+  );
+  const audioTitle = prayerConfig?.audioTitle || '';
 
   return (
     <div className="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
@@ -30,9 +40,25 @@ export const AdzanScreen: React.FC = () => {
           ADZAN {prayerLabel}
         </h1>
 
-        <p className="text-xl lg:text-2xl text-emerald-200 font-medium max-w-2xl leading-relaxed mb-8">
-          Mari mendengarkan dan menjawab adzan, mengambil wudhu, serta bersiap melaksanakan sholat berjamaah.
-        </p>
+        {isAudioEnabled ? (
+          <div className="flex flex-col items-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-900/60 border border-emerald-500/50 text-emerald-300 text-sm md:text-base font-semibold shadow-lg shadow-emerald-950/50 mb-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <span>Memutar Audio Adzan Otomatis</span>
+              {audioTitle && <span className="text-emerald-100 font-normal">({audioTitle})</span>}
+            </div>
+            <p className="text-lg lg:text-xl text-slate-300 font-medium max-w-2xl leading-relaxed">
+              Dengarkan dan jawablah seruan adzan dengan khusyuk.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xl lg:text-2xl text-emerald-200 font-medium max-w-2xl leading-relaxed mb-8">
+            Mari mendengarkan dan menjawab adzan, mengambil wudhu, serta bersiap melaksanakan sholat berjamaah.
+          </p>
+        )}
 
         {/* Countdown to Iqomah screen */}
         <div className="bg-slate-900/80 border border-emerald-500/40 px-6 py-3 rounded-2xl flex items-center gap-3">

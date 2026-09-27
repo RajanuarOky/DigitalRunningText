@@ -10,6 +10,8 @@ class AudioService {
   private audioCtx: AudioContext | null = null;
   private currentTartilAudio: HTMLAudioElement | null = null;
   private currentTartilUrl: string | null = null;
+  private currentAdzanAudio: HTMLAudioElement | null = null;
+  private currentAdzanUrl: string | null = null;
   private isUnlocked = false;
   private tartilStatus: TartilAudioStatus = 'idle';
   private statusListeners: Set<(status: TartilAudioStatus) => void> = new Set();
@@ -44,6 +46,13 @@ class AudioService {
         this.setTartilStatus('playing');
       }).catch((e) => {
         console.warn('Resume on unlock failed:', e);
+      });
+    }
+
+    // If adzan audio is currently loaded but paused due to autoplay restriction, resume it immediately
+    if (this.currentAdzanAudio && this.currentAdzanAudio.paused) {
+      this.currentAdzanAudio.play().catch((e) => {
+        console.warn('Resume adzan on unlock failed:', e);
       });
     }
   }
@@ -267,6 +276,105 @@ class AudioService {
 
   public isTartilPlaying(): boolean {
     return !!this.currentTartilAudio && !this.currentTartilAudio.paused;
+  }
+
+  /**
+   * Putar audio Adzan otomatis
+   * @param audioUrl URL MP3 Adzan
+   * @param volume Volume playback (0.0 - 1.0)
+   * @param startOffsetSeconds Posisi detik awal jika TV baru dibuka di tengah adzan
+   */
+  public playAdzan(audioUrl: string, volume = 0.9, startOffsetSeconds = 0): Promise<void> {
+    return new Promise((resolve) => {
+      // Pastikan tartil berhenti jika sedang berjalan
+      this.stopTartil();
+
+      // Jika URL yang sama sudah sedang diputar, cukup pastikan volume dan lanjut
+      if (this.currentAdzanAudio && this.currentAdzanUrl === audioUrl && !this.currentAdzanAudio.paused) {
+        this.currentAdzanAudio.volume = Math.max(0, Math.min(1, volume));
+        resolve();
+        return;
+      }
+
+      this.stopAdzan();
+      this.initAudioContext();
+
+      try {
+        const audio = new Audio();
+        this.currentAdzanAudio = audio;
+        this.currentAdzanUrl = audioUrl;
+
+        audio.src = audioUrl;
+        audio.preload = 'auto';
+        audio.volume = Math.max(0, Math.min(1, volume));
+
+        if (startOffsetSeconds > 0) {
+          audio.currentTime = startOffsetSeconds;
+        }
+
+        audio.onended = () => {
+          this.stopAdzan();
+          resolve();
+        };
+
+        audio.onerror = (e) => {
+          console.warn('Gagal memuat audio adzan:', audioUrl, e);
+          this.stopAdzan();
+          resolve();
+        };
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              this.isUnlocked = true;
+              console.log('▶️ Berhasil memutar Audio Adzan:', audioUrl);
+              resolve();
+            })
+            .catch((err) => {
+              console.warn('Autoplay Audio Adzan terblokir (butuh interaksi):', err);
+              const resumeOnInteraction = () => {
+                this.unlockAudio();
+                if (this.currentAdzanAudio) {
+                  this.currentAdzanAudio.play().catch(() => {});
+                }
+                window.removeEventListener('click', resumeOnInteraction);
+                window.removeEventListener('keydown', resumeOnInteraction);
+                window.removeEventListener('touchstart', resumeOnInteraction);
+              };
+              window.addEventListener('click', resumeOnInteraction, { once: true });
+              window.addEventListener('keydown', resumeOnInteraction, { once: true });
+              window.addEventListener('touchstart', resumeOnInteraction, { once: true });
+              resolve();
+            });
+        }
+      } catch (err) {
+        console.error('Error saat inisialisasi audio adzan:', err);
+        this.stopAdzan();
+        resolve();
+      }
+    });
+  }
+
+  /**
+   * Hentikan audio Adzan
+   */
+  public stopAdzan() {
+    if (this.currentAdzanAudio) {
+      try {
+        this.currentAdzanAudio.pause();
+        this.currentAdzanAudio.removeAttribute('src');
+        this.currentAdzanAudio.load();
+      } catch (err) {
+        console.warn('Error stopping adzan audio:', err);
+      }
+      this.currentAdzanAudio = null;
+    }
+    this.currentAdzanUrl = null;
+  }
+
+  public isAdzanPlaying(): boolean {
+    return !!this.currentAdzanAudio && !this.currentAdzanAudio.paused;
   }
 }
 
