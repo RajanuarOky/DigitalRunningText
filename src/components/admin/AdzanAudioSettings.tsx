@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMosque } from '../../context/MosqueContext';
 import type { AdzanConfig } from '../../types';
 import { audioService } from '../../services/audioService';
+import { DEFAULT_DATA } from '../../services/storageService';
 import { Volume2, Play, Square, Save, CheckCircle2, Bell, Radio, Sparkles } from 'lucide-react';
 
 const ADZAN_PRESETS = {
@@ -38,9 +39,29 @@ const ADZAN_PRESETS = {
 
 export const AdzanAudioSettings: React.FC = () => {
   const { data, updateData } = useMosque();
-  const [adzanForm, setAdzanForm] = useState<AdzanConfig>(data.adzan);
+  const [adzanForm, setAdzanForm] = useState<AdzanConfig>(() => ({
+    ...DEFAULT_DATA.adzan,
+    ...(data?.adzan || {}),
+    prayers: {
+      ...DEFAULT_DATA.adzan.prayers,
+      ...(data?.adzan?.prayers || {}),
+    },
+  }));
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [playingPrayer, setPlayingPrayer] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (data?.adzan) {
+      setAdzanForm({
+        ...DEFAULT_DATA.adzan,
+        ...data.adzan,
+        prayers: {
+          ...DEFAULT_DATA.adzan.prayers,
+          ...(data.adzan.prayers || {}),
+        },
+      });
+    }
+  }, [data?.adzan]);
 
   const prayerKeys: ('fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha')[] = [
     'fajr',
@@ -63,34 +84,42 @@ export const AdzanAudioSettings: React.FC = () => {
     field: string,
     value: string | number | boolean
   ) => {
-    setAdzanForm((prev) => ({
-      ...prev,
-      prayers: {
-        ...prev.prayers,
-        [prayer]: {
-          ...prev.prayers[prayer],
-          [field]: value,
+    setAdzanForm((prev) => {
+      const base = prev || DEFAULT_DATA.adzan;
+      const basePrayers = base.prayers || DEFAULT_DATA.adzan.prayers;
+      return {
+        ...base,
+        prayers: {
+          ...basePrayers,
+          [prayer]: {
+            ...(basePrayers[prayer] || DEFAULT_DATA.adzan.prayers[prayer]),
+            [field]: value,
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const handleSelectPreset = (
     prayer: keyof AdzanConfig['prayers'],
     preset: { title: string; url: string; durationSeconds: number }
   ) => {
-    setAdzanForm((prev) => ({
-      ...prev,
-      prayers: {
-        ...prev.prayers,
-        [prayer]: {
-          ...prev.prayers[prayer],
-          audioTitle: preset.title,
-          audioUrl: preset.url,
-          durationSeconds: preset.durationSeconds,
+    setAdzanForm((prev) => {
+      const base = prev || DEFAULT_DATA.adzan;
+      const basePrayers = base.prayers || DEFAULT_DATA.adzan.prayers;
+      return {
+        ...base,
+        prayers: {
+          ...basePrayers,
+          [prayer]: {
+            ...(basePrayers[prayer] || DEFAULT_DATA.adzan.prayers[prayer]),
+            audioTitle: preset.title,
+            audioUrl: preset.url,
+            durationSeconds: preset.durationSeconds,
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const handlePlayPreview = (audioUrl: string, prayerKey: string) => {
@@ -99,7 +128,7 @@ export const AdzanAudioSettings: React.FC = () => {
       setPlayingPrayer(null);
     } else {
       audioService.stopAdzan();
-      audioService.playAdzan(audioUrl, adzanForm.volume);
+      audioService.playAdzan(audioUrl, adzanForm?.volume ?? 0.9);
       setPlayingPrayer(prayerKey);
     }
   };
@@ -108,9 +137,10 @@ export const AdzanAudioSettings: React.FC = () => {
     e.preventDefault();
     audioService.stopAdzan();
     setPlayingPrayer(null);
+    const formToSave = adzanForm || DEFAULT_DATA.adzan;
     updateData((prev) => ({
       ...prev,
-      adzan: adzanForm,
+      adzan: formToSave,
     }));
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
@@ -156,15 +186,15 @@ export const AdzanAudioSettings: React.FC = () => {
           <label className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
-              checked={adzanForm.masterEnabled}
-              onChange={(e) => setAdzanForm((prev) => ({ ...prev, masterEnabled: e.target.checked }))}
+              checked={adzanForm?.masterEnabled ?? true}
+              onChange={(e) => setAdzanForm((prev) => ({ ...(prev || DEFAULT_DATA.adzan), masterEnabled: e.target.checked }))}
               className="sr-only peer"
             />
             <div className="w-12 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
           </label>
         </div>
 
-        {adzanForm.masterEnabled && (
+        {adzanForm?.masterEnabled && (
           <div className="pt-4 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -173,7 +203,7 @@ export const AdzanAudioSettings: React.FC = () => {
                   <span>Volume Audio Adzan</span>
                 </label>
                 <span className="text-xs font-mono font-bold text-emerald-400">
-                  {Math.round((adzanForm.volume || 0.9) * 100)}%
+                  {Math.round((adzanForm?.volume ?? 0.9) * 100)}%
                 </span>
               </div>
               <input
@@ -181,8 +211,8 @@ export const AdzanAudioSettings: React.FC = () => {
                 min="0.1"
                 max="1"
                 step="0.05"
-                value={adzanForm.volume || 0.9}
-                onChange={(e) => setAdzanForm((prev) => ({ ...prev, volume: parseFloat(e.target.value) }))}
+                value={adzanForm?.volume ?? 0.9}
+                onChange={(e) => setAdzanForm((prev) => ({ ...(prev || DEFAULT_DATA.adzan), volume: parseFloat(e.target.value) }))}
                 className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
               />
             </div>
@@ -200,8 +230,8 @@ export const AdzanAudioSettings: React.FC = () => {
               <label className="relative inline-flex items-center cursor-pointer shrink-0">
                 <input
                   type="checkbox"
-                  checked={adzanForm.playChimeBefore !== false}
-                  onChange={(e) => setAdzanForm((prev) => ({ ...prev, playChimeBefore: e.target.checked }))}
+                  checked={adzanForm?.playChimeBefore !== false}
+                  onChange={(e) => setAdzanForm((prev) => ({ ...(prev || DEFAULT_DATA.adzan), playChimeBefore: e.target.checked }))}
                   className="sr-only peer"
                 />
                 <div className="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
@@ -220,12 +250,7 @@ export const AdzanAudioSettings: React.FC = () => {
 
         <div className="grid grid-cols-1 gap-4">
           {prayerKeys.map((key) => {
-            const prayerCfg = adzanForm.prayers[key] || {
-              enabled: false,
-              audioTitle: '',
-              audioUrl: '',
-              durationSeconds: 180,
-            };
+            const prayerCfg = adzanForm?.prayers?.[key] || DEFAULT_DATA.adzan.prayers[key];
             const presets = key === 'fajr' ? ADZAN_PRESETS.fajr : ADZAN_PRESETS.regular;
             const isPlaying = playingPrayer === key;
 

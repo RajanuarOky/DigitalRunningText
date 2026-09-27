@@ -5,7 +5,7 @@ import type {
   CalculatedPrayers,
   PrayerName,
 } from '../types';
-import { storageService } from '../services/storageService';
+import { storageService, sanitizeSystemData } from '../services/storageService';
 import { computePrayers } from '../services/prayerTimes';
 import { audioService } from '../services/audioService';
 import { channelService, type ChannelMessage } from '../services/channelService';
@@ -188,7 +188,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           applyLocalTestSound(msg.sound);
           break;
         case 'SYNC_DATA':
-          setData(msg.data);
+          setData(sanitizeSystemData(msg.data));
           break;
       }
     });
@@ -197,8 +197,9 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (supabaseService.isConfigured()) {
       supabaseService.fetchCloudData().then((cloudData) => {
         if (cloudData) {
-          setData(cloudData);
-          storageService.saveData(cloudData);
+          const sanitized = sanitizeSystemData(cloudData);
+          setData(sanitized);
+          storageService.saveData(sanitized);
         } else {
           // Jika di Cloud belum ada data sama sekali, otomatis unggah data default ke Cloud
           const currentLocal = storageService.loadData();
@@ -208,8 +209,9 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       supabaseService.subscribeRealtime(
         (cloudData) => {
-          setData(cloudData);
-          storageService.saveData(cloudData);
+          const sanitized = sanitizeSystemData(cloudData);
+          setData(sanitized);
+          storageService.saveData(sanitized);
         },
         (cmd) => {
           if (cmd.action === 'ADZAN') applyLocalSimulateAdzan(cmd.prayerName, cmd.durationSeconds);
