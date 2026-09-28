@@ -78,24 +78,41 @@ create table if not exists mosque_config (
 
 -- 2. Aktifkan Row Level Security & Izin Anonim (Aman & Gratis)
 alter table mosque_config enable row level security;
+
+drop policy if exists "Allow public read" on mosque_config;
 create policy "Allow public read" on mosque_config for select using (true);
+
+drop policy if exists "Allow public insert" on mosque_config;
 create policy "Allow public insert" on mosque_config for insert with check (true);
+
+drop policy if exists "Allow public update" on mosque_config;
 create policy "Allow public update" on mosque_config for update using (true);
 
--- 3. Aktifkan Realtime WebSocket
-alter publication supabase_realtime add table mosque_config;
+-- 3. Aktifkan Realtime WebSocket (Aman dijalankan berulang kali)
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables 
+    where pubname = 'supabase_realtime' and tablename = 'mosque_config'
+  ) then
+    alter publication supabase_realtime add table mosque_config;
+  end if;
+end $$;
 
 -- 4. Buat Storage Bucket Publik untuk Upload File MP3 Murottal & Adzan (Gratis 1GB)
 insert into storage.buckets (id, name, public)
 values ('murottal', 'murottal', true)
 on conflict (id) do update set public = true;
 
+drop policy if exists "Allow public read audio" on storage.objects;
 create policy "Allow public read audio" on storage.objects
 for select using (bucket_id = 'murottal');
 
+drop policy if exists "Allow public upload audio" on storage.objects;
 create policy "Allow public upload audio" on storage.objects
 for insert with check (bucket_id = 'murottal');
 
+drop policy if exists "Allow public update audio" on storage.objects;
 create policy "Allow public update audio" on storage.objects
 for update using (bucket_id = 'murottal');`;
 
