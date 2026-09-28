@@ -299,6 +299,63 @@ class SupabaseService {
         }
       });
   }
+
+  /**
+   * Upload file MP3 Murottal / Adzan ke Supabase Storage (Bucket: 'murottal')
+   */
+  public async uploadAudioFile(
+    file: File,
+    folder = 'murottal'
+  ): Promise<{ success: boolean; url?: string; error?: string }> {
+    if (!this.client || !this.isConfigured()) {
+      return {
+        success: false,
+        error: 'Cloud Supabase belum terhubung. Silakan atur URL & Key di tab "Cloud Sync" terlebih dahulu.',
+      };
+    }
+
+    try {
+      // Bersihkan nama file agar aman URL (hanya alfanumerik, titik, strip, underscore)
+      const cleanName = file.name
+        .toLowerCase()
+        .replace(/[^a-z0-9.]/g, '_')
+        .replace(/_+/g, '_');
+      const fileName = `${Date.now()}_${cleanName}`;
+      const filePath = `${folder}/${fileName}`;
+
+      const { error: uploadError } = await this.client.storage
+        .from('murottal')
+        .upload(filePath, file, {
+          cacheControl: '31536000',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('Supabase storage upload error:', uploadError);
+        if (
+          uploadError.message?.includes('Bucket not found') ||
+          (uploadError as unknown as { statusCode?: number }).statusCode === 404
+        ) {
+          return {
+            success: false,
+            error:
+              'Bucket storage "murottal" belum dibuat di Supabase Anda. Silakan jalankan script SQL di tab "Cloud Sync" atau buat bucket publik bernama "murottal" di menu Storage Supabase.',
+          };
+        }
+        return { success: false, error: uploadError.message };
+      }
+
+      const { data } = this.client.storage
+        .from('murottal')
+        .getPublicUrl(filePath);
+
+      return { success: true, url: data.publicUrl };
+    } catch (err: unknown) {
+      console.error('Upload exception:', err);
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat mengunggah file.';
+      return { success: false, error: msg };
+    }
+  }
 }
 
 export const supabaseService = new SupabaseService();

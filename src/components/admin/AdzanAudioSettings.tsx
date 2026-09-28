@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useMosque } from '../../context/MosqueContext';
 import type { AdzanConfig } from '../../types';
 import { audioService } from '../../services/audioService';
+import { supabaseService } from '../../services/supabaseService';
 import { DEFAULT_DATA } from '../../services/storageService';
-import { Volume2, Play, Square, Save, CheckCircle2, Bell, Radio, Sparkles } from 'lucide-react';
+import { Volume2, Play, Square, Save, CheckCircle2, Bell, Radio, Sparkles, UploadCloud, Loader2, AlertCircle } from 'lucide-react';
 
 const ADZAN_PRESETS = {
   fajr: [
@@ -49,6 +50,8 @@ export const AdzanAudioSettings: React.FC = () => {
   }));
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [playingPrayer, setPlayingPrayer] = useState<string | null>(null);
+  const [uploadingPrayer, setUploadingPrayer] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (data?.adzan) {
@@ -122,6 +125,36 @@ export const AdzanAudioSettings: React.FC = () => {
     });
   };
 
+  const handleFileUpload = async (
+    prayerKey: keyof AdzanConfig['prayers'],
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.mp3') && !file.type.includes('audio')) {
+      alert('Mohon pilih file berekstensi .mp3 atau format audio.');
+      return;
+    }
+
+    setUploadingPrayer(prayerKey);
+    setUploadError(null);
+
+    const res = await supabaseService.uploadAudioFile(file, 'adzan');
+    setUploadingPrayer(null);
+
+    if (res.success && res.url) {
+      handlePrayerChange(prayerKey, 'audioUrl', res.url);
+      const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[_\\-]/g, ' ');
+      handlePrayerChange(prayerKey, 'audioTitle', cleanTitle);
+    } else {
+      setUploadError(res.error || 'Gagal mengunggah file rekaman adzan.');
+      setTimeout(() => setUploadError(null), 8000);
+    }
+
+    e.target.value = '';
+  };
+
   const handlePlayPreview = (audioUrl: string, prayerKey: string) => {
     if (playingPrayer === prayerKey) {
       audioService.stopAdzan();
@@ -152,6 +185,13 @@ export const AdzanAudioSettings: React.FC = () => {
         <div className="flex items-center gap-2 p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm font-semibold animate-in fade-in">
           <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           <span>Pengaturan Suara Audio Adzan berhasil disimpan & disinkronisasikan!</span>
+        </div>
+      )}
+
+      {uploadError && (
+        <div className="flex items-center gap-2 p-4 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs sm:text-sm font-semibold">
+          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+          <span>{uploadError}</span>
         </div>
       )}
 
@@ -356,20 +396,48 @@ export const AdzanAudioSettings: React.FC = () => {
                       <label className="text-xs font-semibold text-slate-400 block mb-1">
                         URL File Audio MP3 Adzan
                       </label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         <input
                           type="text"
                           value={prayerCfg.audioUrl || ''}
                           onChange={(e) => handlePrayerChange(key, 'audioUrl', e.target.value)}
                           placeholder="https://.../adzan.mp3"
-                          className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
+                          className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
                         />
+
+                        <label
+                          title="Unggah file rekaman adzan MP3 dari HP/Laptop ke Cloud Supabase"
+                          className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold cursor-pointer transition shrink-0 ${
+                            uploadingPrayer === key
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                              : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                          }`}
+                        >
+                          {uploadingPrayer === key ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Mengunggah...</span>
+                            </>
+                          ) : (
+                            <>
+                              <UploadCloud className="w-3.5 h-3.5" />
+                              <span>Upload MP3</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="audio/mp3,audio/*,.mp3"
+                            className="sr-only"
+                            disabled={uploadingPrayer === key}
+                            onChange={(e) => handleFileUpload(key, e)}
+                          />
+                        </label>
 
                         {prayerCfg.audioUrl && (
                           <button
                             type="button"
                             onClick={() => handlePlayPreview(prayerCfg.audioUrl, key)}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
+                            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 ${
                               isPlaying
                                 ? 'bg-amber-600 text-white hover:bg-amber-500 animate-pulse'
                                 : 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white'

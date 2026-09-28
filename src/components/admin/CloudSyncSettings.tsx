@@ -83,7 +83,21 @@ create policy "Allow public insert" on mosque_config for insert with check (true
 create policy "Allow public update" on mosque_config for update using (true);
 
 -- 3. Aktifkan Realtime WebSocket
-alter publication supabase_realtime add table mosque_config;`;
+alter publication supabase_realtime add table mosque_config;
+
+-- 4. Buat Storage Bucket Publik untuk Upload File MP3 Murottal & Adzan (Gratis 1GB)
+insert into storage.buckets (id, name, public)
+values ('murottal', 'murottal', true)
+on conflict (id) do update set public = true;
+
+create policy "Allow public read audio" on storage.objects
+for select using (bucket_id = 'murottal');
+
+create policy "Allow public upload audio" on storage.objects
+for insert with check (bucket_id = 'murottal');
+
+create policy "Allow public update audio" on storage.objects
+for update using (bucket_id = 'murottal');`;
 
   const handleCopySql = () => {
     navigator.clipboard.writeText(sqlSetupCode);

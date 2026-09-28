@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useMosque } from '../../context/MosqueContext';
 import type { TartilConfig, IqomahConfig, PrayerDisplayModeConfig } from '../../types';
 import { audioService } from '../../services/audioService';
-import { Disc, Play, Square, Save, CheckCircle2, Clock, Volume2, Moon } from 'lucide-react';
+import { supabaseService } from '../../services/supabaseService';
+import { Disc, Play, Square, Save, CheckCircle2, Clock, Volume2, Moon, UploadCloud, Loader2, AlertCircle } from 'lucide-react';
 
 const AUDIO_PRESETS = [
   {
@@ -38,6 +39,8 @@ export const TartilSettings: React.FC = () => {
   const [prayerModeForm, setPrayerModeForm] = useState<PrayerDisplayModeConfig>(data.prayerMode);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isPlayingPreview, setIsPlayingPreview] = useState<string | null>(null);
+  const [uploadingPrayer, setUploadingPrayer] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const prayerKeys: ('fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha')[] = [
     'fajr',
@@ -72,6 +75,36 @@ export const TartilSettings: React.FC = () => {
     }));
   };
 
+  const handleFileUpload = async (
+    prayerKey: keyof TartilConfig['prayers'],
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.mp3') && !file.type.includes('audio')) {
+      alert('Mohon pilih file berekstensi .mp3 atau format audio.');
+      return;
+    }
+
+    setUploadingPrayer(prayerKey);
+    setUploadError(null);
+
+    const res = await supabaseService.uploadAudioFile(file, 'murottal');
+    setUploadingPrayer(null);
+
+    if (res.success && res.url) {
+      handleTartilPrayerChange(prayerKey, 'audioUrl', res.url);
+      const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[_\\-]/g, ' ');
+      handleTartilPrayerChange(prayerKey, 'audioTitle', cleanTitle);
+    } else {
+      setUploadError(res.error || 'Gagal mengunggah file.');
+      setTimeout(() => setUploadError(null), 8000);
+    }
+
+    e.target.value = '';
+  };
+
   const handlePlayPreview = (audioUrl: string, key: string) => {
     if (isPlayingPreview === key) {
       audioService.stopTartil();
@@ -103,6 +136,13 @@ export const TartilSettings: React.FC = () => {
         <div className="flex items-center gap-2 p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm font-semibold">
           <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           <span>Pengaturan Auto-Tartil, Iqomah, dan Mode Sholat berhasil disimpan!</span>
+        </div>
+      )}
+
+      {uploadError && (
+        <div className="flex items-center gap-2 p-4 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs sm:text-sm font-semibold">
+          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+          <span>{uploadError}</span>
         </div>
       )}
 
@@ -214,15 +254,44 @@ export const TartilSettings: React.FC = () => {
                     placeholder="Judul Surat / Qari"
                     className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200"
                   />
-                  <input
-                    type="text"
-                    value={pCfg.audioUrl}
-                    onChange={(e) =>
-                      handleTartilPrayerChange(pKey, 'audioUrl', e.target.value)
-                    }
-                    placeholder="URL Audio MP3 (Online / Lokal STB)"
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={pCfg.audioUrl}
+                      onChange={(e) =>
+                        handleTartilPrayerChange(pKey, 'audioUrl', e.target.value)
+                      }
+                      placeholder="URL Audio MP3 (Online / Lokal STB)"
+                      className="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono"
+                    />
+                    <label
+                      title="Unggah file MP3 dari HP/Laptop Anda ke Cloud Supabase"
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition shrink-0 ${
+                        uploadingPrayer === pKey
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                          : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                      }`}
+                    >
+                      {uploadingPrayer === pKey ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span className="hidden sm:inline">Unggah...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Upload MP3</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="audio/mp3,audio/*,.mp3"
+                        className="sr-only"
+                        disabled={uploadingPrayer === pKey}
+                        onChange={(e) => handleFileUpload(pKey, e)}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {/* Preset Dropdown & Test Play */}
