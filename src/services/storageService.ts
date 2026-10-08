@@ -8,11 +8,13 @@ export const DEFAULT_DATA: SystemData = {
     name: 'MASJID JAMI\' BAITURRAHMAN',
     tagline: 'Pusat Ibadah, Pembinaan Umat, dan Kebajikan Sosial',
     address: 'Jl. Melati No. 45, Jakarta Selatan | Telp: (021) 7890123',
+    city: 'Jakarta Selatan',
     latitude: -6.2088,
     longitude: 106.8456,
     timezone: 'Asia/Jakarta',
     calcMethod: 'KEMENAG',
     hijriOffset: 0,
+    adminPin: '1234',
     prayerAdjustments: {
       fajr: 2,
       sunrise: -2,
@@ -232,10 +234,15 @@ export function sanitizeSystemData(parsed: any): SystemData {
   return loaded;
 }
 
+const getStorageKey = (mosqueId = 'default') => {
+  return !mosqueId || mosqueId === 'default' ? STORAGE_KEY : `${STORAGE_KEY}_${mosqueId}`;
+};
+
 export const storageService = {
-  loadData(): SystemData {
+  loadData(mosqueId = 'default'): SystemData {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const key = getStorageKey(mosqueId);
+      const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
         return sanitizeSystemData(parsed);
@@ -246,20 +253,22 @@ export const storageService = {
     return DEFAULT_DATA;
   },
 
-  saveData(data: SystemData) {
+  saveData(data: SystemData, mosqueId = 'default') {
     try {
       data.version = (data.version || 1) + 1;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      const key = getStorageKey(mosqueId);
+      localStorage.setItem(key, JSON.stringify(data));
       // Dispatch custom event untuk sinkronisasi realtime pada window yang sama / multi-tab
-      window.dispatchEvent(new CustomEvent('rt_mosque_sync', { detail: data }));
+      window.dispatchEvent(new CustomEvent('rt_mosque_sync', { detail: { data, mosqueId } }));
     } catch (e) {
       console.error('Gagal menyimpan data ke localStorage:', e);
     }
   },
 
-  resetDefaults(): SystemData {
-    localStorage.removeItem(STORAGE_KEY);
-    window.dispatchEvent(new CustomEvent('rt_mosque_sync', { detail: DEFAULT_DATA }));
+  resetDefaults(mosqueId = 'default'): SystemData {
+    const key = getStorageKey(mosqueId);
+    localStorage.removeItem(key);
+    window.dispatchEvent(new CustomEvent('rt_mosque_sync', { detail: { data: DEFAULT_DATA, mosqueId } }));
     return DEFAULT_DATA;
   },
 };

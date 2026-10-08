@@ -13,12 +13,14 @@ export interface MosqueConfig {
   name: string;
   tagline: string;
   address: string;
+  city?: string;
   latitude: number;
   longitude: number;
   timezone: string;
   calcMethod: 'KEMENAG' | 'MWL' | 'EGYPT' | 'MAKKAH';
   hijriOffset: number; // Koreksi hari kalender Hijriah (-2 sd +2)
   prayerAdjustments: PrayerAdjustment;
+  adminPin?: string; // PIN Keamanan Pengurus DKM (default '1234')
 }
 
 export interface TartilPrayerConfig {
@@ -149,5 +151,14 @@ export interface SystemData {
   friday: FridayInfo;
   banners: BannerSlide[];
   version: number;
+}
+
+export interface MosqueListItem {
+  id: string;
+  name: string;
+  city: string;
+  address?: string;
+  adminPin?: string;
+  updatedAt?: string;
 }
 

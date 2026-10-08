@@ -7,6 +7,7 @@ import { RunningTextManager } from './RunningTextManager';
 import { MediaBannerManager } from './MediaBannerManager';
 import { RemoteSimulator } from './RemoteSimulator';
 import { CloudSyncSettings } from './CloudSyncSettings';
+import { DkmPinModal } from './DkmPinModal';
 import {
   Building,
   Disc,
@@ -18,17 +19,35 @@ import {
   Volume2,
   Cloud,
   Radio,
+  Lock,
+  Shield,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
   onNavigateToTv: () => void;
+  onNavigateToSuperAdmin?: () => void;
 }
 
 type TabType = 'mosque' | 'adzan' | 'tartil' | 'runningText' | 'media' | 'simulator' | 'cloud';
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTv }) => {
-  const { data, resetData, unlockAudio, isAudioUnlocked } = useMosque();
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTv, onNavigateToSuperAdmin }) => {
+  const { data, resetData, unlockAudio, isAudioUnlocked, mosqueId } = useMosque();
   const [activeTab, setActiveTab] = useState<TabType>('simulator');
+
+  const sessionKey = `dkm_unlocked_${mosqueId || 'default'}`;
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem(sessionKey) === 'true';
+  });
+
+  const handlePinSuccess = () => {
+    sessionStorage.setItem(sessionKey, 'true');
+    setIsUnlocked(true);
+  };
+
+  const handleLockAdmin = () => {
+    sessionStorage.removeItem(sessionKey);
+    setIsUnlocked(false);
+  };
 
   const tabs: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: 'simulator', label: 'Remote & Simulasi', icon: <PlayCircle className="w-4 h-4" /> },
@@ -48,6 +67,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTv }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      {/* PIN Gate Protection */}
+      {!isUnlocked && (
+        <DkmPinModal
+          mosqueName={data.mosque.name}
+          expectedPin={data.mosque.adminPin || '1234'}
+          onSuccess={handlePinSuccess}
+          onCancel={onNavigateToTv}
+        />
+      )}
+
       {/* Top Navbar */}
       <header className="w-full bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-0 z-30 shadow-lg">
         <div className="flex items-center gap-3">
@@ -55,16 +84,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTv }
             RT
           </div>
           <div>
-            <h1 className="text-lg font-black text-white uppercase tracking-wider">
-              {data.mosque.name}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-black text-white uppercase tracking-wider">
+                {data.mosque.name}
+              </h1>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 border border-slate-700 text-emerald-400 font-bold">
+                ID: {mosqueId}
+              </span>
+            </div>
             <p className="text-xs text-emerald-400 font-medium">
               Panel Pengurus DKM • Kontrol Signage TV & Auto-Tartil
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {!isAudioUnlocked && (
             <button
               onClick={unlockAudio}
@@ -74,6 +108,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigateToTv }
               <span>Aktifkan Audio</span>
             </button>
           )}
+
+          {onNavigateToSuperAdmin && (
+            <button
+              onClick={onNavigateToSuperAdmin}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 text-purple-300 border border-purple-800/50 text-xs font-semibold transition cursor-pointer"
+              title="Panel Super Admin Teknisi"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Super Admin</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleLockAdmin}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer"
+            title="Kunci Panel Admin"
+          >
+            <Lock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Kunci</span>
+          </button>
 
           <button
             onClick={handleResetConfirm}

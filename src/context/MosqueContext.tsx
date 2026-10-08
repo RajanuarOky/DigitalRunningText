@@ -15,6 +15,8 @@ interface MosqueContextType {
   data: SystemData;
   updateData: (updater: (prev: SystemData) => SystemData) => void;
   resetData: () => void;
+  mosqueId: string;
+  setMosqueId: (id: string) => void;
   currentTime: Date;
   prayers: CalculatedPrayers;
   displayState: AppDisplayState;
@@ -34,7 +36,13 @@ interface MosqueContextType {
 const MosqueContext = createContext<MosqueContextType | undefined>(undefined);
 
 export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [data, setData] = useState<SystemData>(() => storageService.loadData());
+  const [mosqueId, setMosqueIdState] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'default';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('masjid') || params.get('sync_id') || params.get('syncId') || params.get('id') || 'default';
+  });
+
+  const [data, setData] = useState<SystemData>(() => storageService.loadData(mosqueId));
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [displayState, setDisplayState] = useState<AppDisplayState>('NORMAL');
   const [activePrayerTarget, setActivePrayerTarget] = useState<PrayerName | null>(null);
@@ -69,6 +77,20 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const prayers = useMemo(() => {
     return computePrayers(data.mosque, currentTime);
   }, [data.mosque, currentTime]);
+
+  const setMosqueId = useCallback((newId: string) => {
+    const clean = newId.trim().toLowerCase() || 'default';
+    setMosqueIdState(clean);
+    channelService.setMosqueId(clean);
+    supabaseService.setSyncId(clean);
+    const loaded = storageService.loadData(clean);
+    setData(loaded);
+  }, []);
+
+  useEffect(() => {
+    channelService.setMosqueId(mosqueId);
+    supabaseService.setSyncId(mosqueId);
+  }, [mosqueId]);
 
   const unlockAudio = useCallback(() => {
     audioService.unlockAudio();
@@ -195,15 +217,15 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // 2. Cloud Supabase Realtime Listener (Beda Jaringan / HP ke TV)
     if (supabaseService.isConfigured()) {
-      supabaseService.fetchCloudData().then((cloudData) => {
+      supabaseService.fetchCloudData(mosqueId).then((cloudData) => {
         if (cloudData) {
           const sanitized = sanitizeSystemData(cloudData);
           setData(sanitized);
-          storageService.saveData(sanitized);
+          storageService.saveData(sanitized, mosqueId);
         } else {
           // Jika di Cloud belum ada data sama sekali, otomatis unggah data default ke Cloud
-          const currentLocal = storageService.loadData();
-          supabaseService.pushCloudData(currentLocal);
+          const currentLocal = storageService.loadData(mosqueId);
+          supabaseService.pushCloudData(currentLocal, mosqueId);
         }
       });
 
@@ -211,7 +233,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         (cloudData) => {
           const sanitized = sanitizeSystemData(cloudData);
           setData(sanitized);
-          storageService.saveData(sanitized);
+          storageService.saveData(sanitized, mosqueId);
         },
         (cmd) => {
           if (cmd.action === 'ADZAN') applyLocalSimulateAdzan(cmd.prayerName, cmd.durationSeconds);
@@ -220,7 +242,8 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (cmd.action === 'PRAYER_MODE') applyLocalSimulatePrayerMode(cmd.durationSeconds);
           if (cmd.action === 'RESET_NORMAL') applyLocalReset();
           if (cmd.action === 'TEST_SOUND' && cmd.sound) applyLocalTestSound(cmd.sound);
-        }
+        },
+        mosqueId
       );
     }
 
@@ -228,6 +251,7 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubscribeLocal();
     };
   }, [
+    mosqueId,
     applyLocalSimulateAdzan,
     applyLocalSimulateTartil,
     applyLocalSimulateIqomah,
@@ -239,23 +263,23 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateData = useCallback((updater: (prev: SystemData) => SystemData) => {
     setData((prev: SystemData) => {
       const next = updater(prev);
-      storageService.saveData(next);
+      storageService.saveData(next, mosqueId);
       channelService.broadcast({ type: 'SYNC_DATA', data: next });
       if (supabaseService.isConfigured()) {
-        supabaseService.pushCloudData(next);
+        supabaseService.pushCloudData(next, mosqueId);
       }
       return next;
     });
-  }, []);
+  }, [mosqueId]);
 
   const resetData = useCallback(() => {
-    const d = storageService.resetDefaults();
+    const d = storageService.resetDefaults(mosqueId);
     setData(d);
     channelService.broadcast({ type: 'SYNC_DATA', data: d });
     if (supabaseService.isConfigured()) {
-      supabaseService.pushCloudData(d);
+      supabaseService.pushCloudData(d, mosqueId);
     }
-  }, []);
+  }, [mosqueId]);
 
   // 1. Rock-solid 1-second clock tick + Instant Wakeup on Tab Visibility / Focus
   useEffect(() => {
@@ -470,9 +494,9 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       durationSeconds,
     });
     if (supabaseService.isConfigured()) {
-      supabaseService.sendRemoteCommand({ action: 'TARTIL', prayerName, durationSeconds });
+      supabaseService.sendRemoteCommand({ action: 'TARTIL', prayerName, durationSeconds }, mosqueId);
     }
-  }, []);
+  }, [mosqueId]);
 
   const simulateAdzan = useCallback((prayerName: PrayerName = 'maghrib', durationSeconds = 45) => {
     channelService.broadcast({
@@ -481,9 +505,9 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       durationSeconds,
     });
     if (supabaseService.isConfigured()) {
-      supabaseService.sendRemoteCommand({ action: 'ADZAN', prayerName, durationSeconds });
+      supabaseService.sendRemoteCommand({ action: 'ADZAN', prayerName, durationSeconds }, mosqueId);
     }
-  }, []);
+  }, [mosqueId]);
 
   const simulateIqomah = useCallback((prayerName: PrayerName = 'maghrib', minutes = 2) => {
     channelService.broadcast({
@@ -492,9 +516,9 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       durationSeconds: minutes * 60,
     });
     if (supabaseService.isConfigured()) {
-      supabaseService.sendRemoteCommand({ action: 'IQOMAH', prayerName, durationSeconds: minutes * 60 });
+      supabaseService.sendRemoteCommand({ action: 'IQOMAH', prayerName, durationSeconds: minutes * 60 }, mosqueId);
     }
-  }, []);
+  }, [mosqueId]);
 
   const simulatePrayerMode = useCallback((minutes = 1) => {
     channelService.broadcast({
@@ -502,18 +526,18 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       durationSeconds: minutes * 60,
     });
     if (supabaseService.isConfigured()) {
-      supabaseService.sendRemoteCommand({ action: 'PRAYER_MODE', durationSeconds: minutes * 60 });
+      supabaseService.sendRemoteCommand({ action: 'PRAYER_MODE', durationSeconds: minutes * 60 }, mosqueId);
     }
-  }, []);
+  }, [mosqueId]);
 
   const resetToNormal = useCallback(() => {
     channelService.broadcast({
       type: 'RESET_NORMAL',
     });
     if (supabaseService.isConfigured()) {
-      supabaseService.sendRemoteCommand({ action: 'RESET_NORMAL' });
+      supabaseService.sendRemoteCommand({ action: 'RESET_NORMAL' }, mosqueId);
     }
-  }, []);
+  }, [mosqueId]);
 
   const testSound = useCallback((sound: 'beep' | 'chime' | 'iqomah') => {
     applyLocalTestSound(sound);
@@ -522,9 +546,9 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       sound,
     });
     if (supabaseService.isConfigured()) {
-      supabaseService.sendRemoteCommand({ action: 'TEST_SOUND', sound });
+      supabaseService.sendRemoteCommand({ action: 'TEST_SOUND', sound }, mosqueId);
     }
-  }, [applyLocalTestSound]);
+  }, [applyLocalTestSound, mosqueId]);
 
   return (
     <MosqueContext.Provider
@@ -532,6 +556,8 @@ export const MosqueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         data,
         updateData,
         resetData,
+        mosqueId,
+        setMosqueId,
         currentTime,
         prayers,
         displayState,

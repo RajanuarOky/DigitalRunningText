@@ -9,17 +9,35 @@ export type ChannelMessage =
   | { type: 'SYNC_DATA'; data: SystemData }
   | { type: 'TEST_SOUND'; sound: 'beep' | 'chime' | 'iqomah' };
 
-const CHANNEL_NAME = 'rt_tv_masjid_sync_channel';
-const STORAGE_EVENT_KEY = 'rt_tv_masjid_sync_event';
+const BASE_CHANNEL_NAME = 'rt_tv_masjid_sync_channel';
+const BASE_STORAGE_KEY = 'rt_tv_masjid_sync_event';
 
 class ChannelService {
   private channel: BroadcastChannel | null = null;
   private listeners: ((msg: ChannelMessage) => void)[] = [];
+  private mosqueId = 'default';
+  private storageHandler: ((e: StorageEvent) => void) | null = null;
 
   constructor() {
+    this.initChannel();
+  }
+
+  public setMosqueId(id: string) {
+    if (this.mosqueId === id && this.channel) return;
+    this.mosqueId = id || 'default';
+    this.initChannel();
+  }
+
+  private initChannel() {
+    if (this.channel) {
+      this.channel.close();
+      this.channel = null;
+    }
+
+    const channelName = `${BASE_CHANNEL_NAME}_${this.mosqueId}`;
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       try {
-        this.channel = new BroadcastChannel(CHANNEL_NAME);
+        this.channel = new BroadcastChannel(channelName);
         this.channel.onmessage = (event) => {
           this.notifyListeners(event.data);
         };
@@ -28,10 +46,13 @@ class ChannelService {
       }
     }
 
-    // Fallback via window storage event (multi-tab support across all browsers)
     if (typeof window !== 'undefined') {
-      window.addEventListener('storage', (e) => {
-        if (e.key === STORAGE_EVENT_KEY && e.newValue) {
+      if (this.storageHandler) {
+        window.removeEventListener('storage', this.storageHandler);
+      }
+      const storageKey = `${BASE_STORAGE_KEY}_${this.mosqueId}`;
+      this.storageHandler = (e: StorageEvent) => {
+        if (e.key === storageKey && e.newValue) {
           try {
             const parsed = JSON.parse(e.newValue);
             if (parsed && parsed.payload) {
@@ -41,7 +62,8 @@ class ChannelService {
             console.warn('Failed to parse storage event:', err);
           }
         }
-      });
+      };
+      window.addEventListener('storage', this.storageHandler);
     }
   }
 
@@ -77,8 +99,9 @@ class ChannelService {
 
     // 3. Broadcast to other tabs via localStorage event
     try {
+      const storageKey = `${BASE_STORAGE_KEY}_${this.mosqueId}`;
       localStorage.setItem(
-        STORAGE_EVENT_KEY,
+        storageKey,
         JSON.stringify({ payload: msg, timestamp: Date.now() })
       );
     } catch {
@@ -88,3 +111,4 @@ class ChannelService {
 }
 
 export const channelService = new ChannelService();
+

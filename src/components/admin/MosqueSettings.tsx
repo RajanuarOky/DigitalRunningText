@@ -97,6 +97,37 @@ export const MosqueSettings: React.FC = () => {
             />
           </div>
 
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Kota / Kabupaten
+            </label>
+            <input
+              type="text"
+              value={form.city}
+              onChange={(e) => handleChange('city', e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500 text-sm"
+              placeholder="Contoh: Sidoarjo"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>PIN Akses Pengurus DKM</span>
+              <span className="text-[10px] text-amber-400 font-normal">Default: 1234</span>
+            </label>
+            <input
+              type="text"
+              maxLength={8}
+              value={form.adminPin || ''}
+              onChange={(e) => handleChange('adminPin', e.target.value.replace(/\D/g, ''))}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 text-sm font-mono tracking-widest"
+              placeholder="1234"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">
+              PIN numerik untuk membuka panel admin masjid ini dari HP / laptop.
+            </p>
+          </div>
+
           <div className="md:col-span-2">
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
               Alamat Lengkap Masjid

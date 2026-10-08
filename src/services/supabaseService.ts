@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { SystemData, PrayerName } from '../types';
+import type { SystemData, PrayerName, MosqueListItem } from '../types';
+import { DEFAULT_DATA } from './storageService';
 
 export interface SupabaseConfig {
   enabled: boolean;
@@ -31,13 +32,14 @@ class SupabaseService {
 
   public loadConfig(): SupabaseConfig {
     try {
-      // 1. Cek apakah ada kredensial yang dipassing via URL parameters (sangat berguna untuk setup cepat di STB)
-      // Contoh: ?supabase_key=xxx atau ?anonKey=xxx&url=xxx&syncId=xxx
+      // 1. Cek apakah ada kredensial / kode masjid yang dipassing via URL parameters
+      // Contoh: ?masjid=al-ikhlas atau ?id=al-ikhlas atau ?sync_id=al-ikhlas
+      let urlParamSyncId: string | null = null;
       if (typeof window !== 'undefined' && window.location) {
         const urlParams = new URLSearchParams(window.location.search);
         const urlParamUrl = urlParams.get('supabase_url') || urlParams.get('url');
         const urlParamKey = urlParams.get('supabase_key') || urlParams.get('anon_key') || urlParams.get('key');
-        const urlParamSyncId = urlParams.get('sync_id') || urlParams.get('syncId');
+        urlParamSyncId = urlParams.get('masjid') || urlParams.get('sync_id') || urlParams.get('syncId') || urlParams.get('id');
 
         if (urlParamKey) {
           const configFromUrl: SupabaseConfig = {
@@ -73,10 +75,28 @@ class SupabaseService {
           enabled: hasKeys,
         };
       }
+
+      if (urlParamSyncId) {
+        this.config.syncId = urlParamSyncId;
+      }
     } catch {
       this.config = DEFAULT_SUPABASE_CONFIG;
     }
     return this.config;
+  }
+
+  public setSyncId(syncId: string) {
+    this.config = {
+      ...this.config,
+      syncId: syncId || 'default',
+    };
+    if (this.activeChannel) {
+      this.initClient();
+    }
+  }
+
+  public getSyncId(): string {
+    return this.config.syncId || 'default';
   }
 
   public saveConfig(newConfig: SupabaseConfig) {
@@ -152,14 +172,15 @@ class SupabaseService {
   /**
    * Mengambil data masjid terbaru dari Cloud Supabase
    */
-  public async fetchCloudData(): Promise<SystemData | null> {
+  public async fetchCloudData(syncIdOverride?: string): Promise<SystemData | null> {
     if (!this.client || !this.isConfigured()) return null;
 
+    const targetId = syncIdOverride || this.config.syncId || 'default';
     try {
       const { data, error } = await this.client
         .from('mosque_config')
         .select('data')
-        .eq('id', this.config.syncId || 'default')
+        .eq('id', targetId)
         .maybeSingle();
 
       if (error || !data) {
@@ -175,11 +196,11 @@ class SupabaseService {
   /**
    * Menyimpan data masjid ke Cloud Supabase (bisa dipanggil dari HP / Laptop)
    */
-  public async pushCloudData(data: SystemData): Promise<boolean> {
+  public async pushCloudData(data: SystemData, syncIdOverride?: string): Promise<boolean> {
     if (!this.client || !this.isConfigured()) return false;
 
+    const syncId = syncIdOverride || this.config.syncId || 'default';
     try {
-      const syncId = this.config.syncId || 'default';
       const { error } = await this.client.from('mosque_config').upsert(
         {
           id: syncId,
@@ -194,14 +215,17 @@ class SupabaseService {
         return false;
       }
 
-      // Kirim juga broadcast realtime instan
-      if (this.activeChannel) {
-        this.activeChannel.send({
-          type: 'broadcast',
-          event: 'DATA_SYNCED',
-          payload: data,
-        });
+      // Kirim juga broadcast realtime instan ke channel masjid terkait
+      const channelName = `mosque_tv_channel_${syncId}`;
+      let channel = this.activeChannel;
+      if (!channel || channel.topic !== `realtime:${channelName}`) {
+        channel = this.client.channel(channelName);
       }
+      channel.send({
+        type: 'broadcast',
+        event: 'DATA_SYNCED',
+        payload: data,
+      });
 
       return true;
     } catch (e) {
@@ -220,14 +244,16 @@ class SupabaseService {
       | { action: 'IQOMAH'; prayerName: PrayerName; durationSeconds: number }
       | { action: 'PRAYER_MODE'; durationSeconds: number }
       | { action: 'RESET_NORMAL' }
-      | { action: 'TEST_SOUND'; sound: 'beep' | 'chime' | 'iqomah' }
+      | { action: 'TEST_SOUND'; sound: 'beep' | 'chime' | 'iqomah' },
+    syncIdOverride?: string
   ) {
     if (!this.client || !this.isConfigured()) return;
 
-    const channelName = `mosque_tv_channel_${this.config.syncId || 'default'}`;
+    const syncId = syncIdOverride || this.config.syncId || 'default';
+    const channelName = `mosque_tv_channel_${syncId}`;
 
     try {
-      if (!this.activeChannel) {
+      if (!this.activeChannel || this.activeChannel.topic !== `realtime:${channelName}`) {
         this.activeChannel = this.client.channel(channelName);
       }
 
@@ -242,7 +268,7 @@ class SupabaseService {
         event: 'REMOTE_COMMAND',
         payload: command,
       });
-      console.log('📡 [Supabase Broadcast] Remote command sent successfully:', command);
+      console.log(`📡 [Supabase Broadcast (${channelName})] Remote command sent:`, command);
     } catch (e) {
       console.warn('Gagal mengirim broadcast command:', e);
     }
@@ -253,11 +279,13 @@ class SupabaseService {
    */
   public subscribeRealtime(
     onDataUpdated: (newData: SystemData) => void,
-    onCommandReceived?: (cmd: { action: string; prayerName?: PrayerName; durationSeconds?: number; sound?: 'beep' | 'chime' | 'iqomah' }) => void
+    onCommandReceived?: (cmd: { action: string; prayerName?: PrayerName; durationSeconds?: number; sound?: 'beep' | 'chime' | 'iqomah' }) => void,
+    syncIdOverride?: string
   ) {
     if (!this.client || !this.isConfigured()) return;
 
-    const channelName = `mosque_tv_channel_${this.config.syncId || 'default'}`;
+    const syncId = syncIdOverride || this.config.syncId || 'default';
+    const channelName = `mosque_tv_channel_${syncId}`;
 
     if (this.activeChannel) {
       this.activeChannel.unsubscribe();
@@ -273,7 +301,7 @@ class SupabaseService {
           event: '*',
           schema: 'public',
           table: 'mosque_config',
-          filter: `id=eq.${this.config.syncId || 'default'}`,
+          filter: `id=eq.${syncId}`,
         },
         (payload) => {
           if (payload.new && (payload.new as { data: SystemData }).data) {
@@ -290,7 +318,7 @@ class SupabaseService {
       // 3. Dengar broadcast remote simulator
       .on('broadcast', { event: 'REMOTE_COMMAND' }, (payload) => {
         if (onCommandReceived && payload.payload) {
-          onCommandReceived(payload.payload as { action: string; prayerName?: PrayerName; durationSeconds?: number });
+          onCommandReceived(payload.payload as { action: string; prayerName?: PrayerName; durationSeconds?: number; sound?: 'beep' | 'chime' | 'iqomah' });
         }
       })
       .subscribe((status) => {
@@ -299,6 +327,122 @@ class SupabaseService {
         }
       });
   }
+
+  /**
+   * Super Admin: Mendapatkan daftar semua masjid yang terdaftar di Supabase
+   */
+  public async getAllMosques(): Promise<MosqueListItem[]> {
+    if (!this.client || !this.isConfigured()) return [];
+
+    try {
+      const { data, error } = await this.client
+        .from('mosque_config')
+        .select('id, data, updated_at')
+        .order('updated_at', { ascending: false });
+
+      if (error || !data) {
+        console.error('Gagal mengambil daftar masjid:', error);
+        return [];
+      }
+
+      return data.map((row: { id: string; data: Partial<SystemData>; updated_at?: string }) => {
+        const sysData = row.data as SystemData | undefined;
+        return {
+          id: row.id,
+          name: sysData?.mosque?.name || `Masjid (${row.id})`,
+          city: sysData?.mosque?.city || 'Default',
+          adminPin: sysData?.mosque?.adminPin || '1234',
+          updatedAt: row.updated_at,
+        };
+      });
+    } catch (e) {
+      console.error('Error getAllMosques:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Super Admin: Menambahkan masjid baru dengan template default
+   */
+  public async createMosque(
+    id: string,
+    name: string,
+    city: string,
+    adminPin = '1234'
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!this.client || !this.isConfigured()) {
+      return { success: false, error: 'Supabase belum terhubung.' };
+    }
+
+    try {
+      const cleanId = id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+      if (!cleanId) {
+        return { success: false, error: 'ID masjid tidak valid.' };
+      }
+
+      // Pastikan belum ada ID yang sama
+      const { data: existing } = await this.client
+        .from('mosque_config')
+        .select('id')
+        .eq('id', cleanId)
+        .maybeSingle();
+
+      if (existing) {
+        return { success: false, error: `Masjid dengan ID "${cleanId}" sudah ada.` };
+      }
+
+      // Klon template data
+      const newMosqueData: SystemData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      newMosqueData.mosque.name = name;
+      newMosqueData.mosque.city = city;
+      newMosqueData.mosque.adminPin = adminPin;
+
+      const { error: insertError } = await this.client.from('mosque_config').insert({
+        id: cleanId,
+        data: newMosqueData,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (insertError) {
+        return { success: false, error: insertError.message };
+      }
+
+      return { success: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Super Admin: Menghapus masjid dari Supabase
+   */
+  public async deleteMosque(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.client || !this.isConfigured()) {
+      return { success: false, error: 'Supabase belum terhubung.' };
+    }
+
+    if (id === 'default') {
+      return { success: false, error: 'Masjid template "default" tidak dapat dihapus.' };
+    }
+
+    try {
+      const { error } = await this.client
+        .from('mosque_config')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { success: false, error: msg };
+    }
+  }
+
 
   /**
    * Upload file MP3 Murottal / Adzan ke Supabase Storage (Bucket: 'murottal')
